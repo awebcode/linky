@@ -1,6 +1,6 @@
 # Linky 
 
-A real-time chat application built with Express.js, Socket.io, and Next.js. This application allows users to send and receive messages instantly, mimicking the behavior of WhatsApp.
+A real-time chat application built with Express.js, Socket.io, and Next.js. This application allows users to send and receive messages instantly, mimicking the behavior of WhatsApp & Messenger.
 
 ## Features
 
