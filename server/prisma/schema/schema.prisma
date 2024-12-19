@@ -1,0 +1,29 @@
+// schema.prisma
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  GUEST
+  USER
+  ADMIN
+}
+
+enum Status {
+  ONLINE
+  OFFLINE
+  IDLE
+}
+
+enum MessageStatus {
+  SENT // Message has been sent
+  DELIVERED // Message has been delivered to the recipient(s)
+  READ // Message has been read by the recipient(s)
+}

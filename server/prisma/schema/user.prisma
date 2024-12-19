@@ -1,0 +1,22 @@
+
+model User {
+  id                String        @id @default(uuid()) @map("_id")
+  username          String
+  email             String        @unique
+  password          String
+  avatar            String        @default("")
+  role              Role          @default(USER)
+  status            Status        @default(OFFLINE)
+  lastSeenAt        DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  createdAt         DateTime      @default(now())
+  verified          Boolean       @default(false)
+  resetToken        String?       @unique
+  resetTokenExpiry  DateTime?
+  providerId        String?       @default("credential")
+  memberships       ChatMember[]
+  messages          Message[]
+  chatsAdministered Chat[]
+  seenMessages      MessageSeen[]
+  reactions         Reaction[]
+}

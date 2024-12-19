@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f9f9f9;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .email-container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #ffffff;
+      border: 1px solid #dddddd;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .header {
+      background-color: #25D366;
+      color: #ffffff;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    .header p {
+      margin: 5px 0 0;
+      font-size: 16px;
+    }
+
+    .content {
+      padding: 20px;
+    }
+
+    .content h2 {
+      font-size: 20px;
+      margin-bottom: 15px;
+      color: #25D366;
+    }
+
+    .content p {
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .button {
+      display: block;
+      width: fit-content;
+      margin: 0 auto 20px;
+      background-color: #25D366;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .footer {
+      background-color: #f1f1f1;
+      text-align: center;
+      padding: 15px;
+      font-size: 14px;
+      color: #555;
+    }
+
+    .footer a {
+      color: #25D366;
+      text-decoration: none;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Welcome to WhatsApp</h1>
+      <p>Your trusted communication platform</p>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <h2>{{title}}</h2>
+      <p>Hi {{name}},</p>
+      <p>{{message}}</p>
+      <a href="{{link}}" class="button">{{buttonText}}</a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <p>Need help? <a href="https://www.whatsapp.com/help">Contact Support</a></p>
+      <p>&copy; 2024 WhatsApp, Inc. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

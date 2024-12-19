@@ -1,0 +1,47 @@
+model Message {
+  id          String        @id @default(uuid()) @map("_id")
+  content     String
+  senderId    String
+  chatId      String
+  sentAt      DateTime      @default(now())
+  status      MessageStatus @default(SENT)
+  sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  chat        Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  media       Media[] // Optional: Multiple media files per message
+  reactions   Reaction[] // Reactions for the message
+  MessageSeen MessageSeen[]
+}
+
+model Media {
+  id        String  @id @default(uuid()) @map("_id")
+  messageId String
+  type      String? // e.g., 'image', 'video', 'audio', 'document'
+  size      Int? // File size in bytes
+  url       String // URL of the uploaded media
+  caption   String? // Optional caption for the media
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model Reaction {
+  id        String   @id @default(uuid()) @map("_id")
+  messageId String
+  userId    String
+  emoji     String // e.g., "👍", "❤️", "😂"
+  createdAt DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId]) // Ensures each user can react to a message only once
+}
+
+model MessageSeen {
+  id        String   @id @default(uuid()) @map("_id")
+  messageId String
+  userId    String
+  seenAt    DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId]) // Ensures a user can't mark the same message as seen more than once
+}
