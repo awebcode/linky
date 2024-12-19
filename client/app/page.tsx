@@ -1,87 +1,69 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useNetworkStatus } from "@/hooks/use-online";
-import { useSocket } from "@/hooks/use-socket";
-import React, { useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AuthButtons from "@/components/common/AuthButton";
+import DynamicForm from "@/components/common/form/DynamicForm";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import Loader from "@/components/common/Loader";
 
-interface Message {
-  sender: string;
-  message: string;
-}
-
-const ChatApp = () => {
-  const socket = useSocket();
-  const isOnline = useNetworkStatus();
-  const [messages, setMessages] = React.useState<Message[]>([]);
-  const [name, setName] = React.useState("");
-  const [message, setMessage] = React.useState("");
+const HomePage = () => {
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string | null>(null); // Default to null
 
   useEffect(() => {
-    socket.on("message", (data) => {
-      setMessages((prevMessages) => [...prevMessages, data]);
-    });
-  }, []);
+    const tab = searchParams.get("tab") || "login"; // Default to "login" if no tab is specified
+    setActiveTab(tab); // Set the active tab based on the URL
+  }, [searchParams]);
 
-  const sendMessage = () => {
-    if (name && message) {
-      socket.emit("message", { sender: name, message });
-      setMessage(""); // Clear the input field after sending
-    }
+  const onTabsChange = (newTab: string) => {
+    window.history.pushState({}, "", `?tab=${newTab}`); // Update the URL without reloading
+    setActiveTab(newTab); // Update the active tab in state
   };
 
+  if (!activeTab) {
+    // Avoid rendering until activeTab is determined
+    return <Loader />;
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <h2 className="text-emerald-400">
-        {isOnline ? "You are online"   : "You are offline"}
-      </h2>
-      ;
-      <div className="bg-white shadow-lg rounded-lg w-full max-w-md p-6">
-        <h1 className="text-xl font-bold text-center mb-4">Chat Application</h1>
+    <div className="min-h-screen flex flex-col">
+      {/* Main Content */}
+      <main className="flex-1 flex justify-center items-center px-1 md:px-4 py-8">
+        <div className="w-full max-w-lg space-y-6 bg-neutral-200/10 p-2 md:p-8 rounded-lg shadow-2xl">
+          <Tabs onValueChange={onTabsChange} value={activeTab}>
+            <TabsList className="w-full">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
 
-        <div className="mb-4">
-          <Input
-            placeholder="Enter your name"
-            className="mb-2"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <Input
-            placeholder="Enter your message"
-            className="mb-2"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") sendMessage();
-            }}
-          />
-          <Button className="w-full" onClick={sendMessage}>
-            Send Message
-          </Button>
-        </div>
-
-        <div className="bg-gray-50 p-4 rounded-lg shadow-inner max-h-96 overflow-y-auto">
-          {messages.length > 0 ? (
-            messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex flex-col mb-4 p-3 rounded-lg ${
-                  msg.sender === name ? "bg-blue-100 self-end" : "bg-gray-100"
-                }`}
-              >
-                <span className="font-medium text-gray-800">
-                  {msg.sender === name ? "You" : msg.sender}
-                </span>
-                <span className="text-gray-600">{msg.message}</span>
+            <TabsContent value="login">
+              {/* Login Panel */}
+              <div className="space-y-6">
+                <div className="primary p-4 rounded-t-lg">
+                  <h2 className="text-2xl font-bold">Login</h2>
+                  <p className="text-sm">Enter your credentials to access your account</p>
+                </div>
+                <AuthButtons />
+                <DynamicForm formType="login" />
               </div>
-            ))
-          ) : (
-            <p className="text-gray-500 text-center">No messages yet.</p>
-          )}
+            </TabsContent>
+
+            <TabsContent value="register">
+              {/* Register Panel */}
+              <div className="space-y-6">
+                <div className="bg-primary p-4 rounded-t-lg">
+                  <h2 className="text-2xl font-bold">Register</h2>
+                  <p className="text-sm">Create an account by filling in your details</p>
+                </div>
+                <AuthButtons />
+                <DynamicForm formType="register" />
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      </div>
+      </main>
     </div>
   );
 };
 
-export default ChatApp;
+export default HomePage;

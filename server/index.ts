@@ -15,9 +15,8 @@ const server = http.createServer(app);
 
 // Global necessary middlewares
 setupMiddlewares(app);
-app.post("/api/v1/submit", (req, res) => {
-  console.log(req.body);
-  res.status(200).json({ message: "Message submitted successfully", data: req.body });
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Linky Server is running"});
 })
 // Routes
 app.use("/api/v1", mainRoutes);

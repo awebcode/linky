@@ -1,257 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chat Features Model Explanation</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f9f9f9;
-      margin: 0;
-      padding: 0;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Features Model Explanation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f9f9f9;
+        margin: 0;
+        padding: 0;
+      }
 
-    header {
-      background-color: #333;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
+      header {
+        background-color: #333;
+        color: white;
+        padding: 1rem;
+        text-align: center;
+      }
 
-    .container {
-      width: 80%;
-      margin: 20px auto;
-    }
+      .container {
+        width: 80%;
+        margin: 20px auto;
+      }
 
-    h2 {
-      color: #333;
-    }
+      h2 {
+        color: #333;
+      }
 
-    .model-section {
-      background-color: #fff;
-      margin-bottom: 20px;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
+      .model-section {
+        background-color: #fff;
+        margin-bottom: 20px;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      }
 
-    .model-section h3 {
-      color: #333;
-      font-size: 1.3rem;
-    }
+      .model-section h3 {
+        color: #333;
+        font-size: 1.3rem;
+      }
 
-    .model-section p {
-      font-size: 1rem;
-      line-height: 1.6;
-      color: #666;
-    }
+      .model-section p {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: #666;
+      }
 
-    .code {
-      background-color: #f4f4f4;
-      border: 1px solid #ddd;
-      padding: 10px;
-      font-family: monospace;
-      font-size: 1rem;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-      border-radius: 5px;
-    }
+      .code {
+        background-color: #f4f4f4;
+        border: 1px solid #ddd;
+        padding: 10px;
+        font-family: monospace;
+        font-size: 1rem;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        border-radius: 5px;
+      }
 
-    .highlight {
-      color: #007bff;
-    }
+      .highlight {
+        color: #007bff;
+      }
 
-    .note {
-      background-color: #fff4e5;
-      border-left: 4px solid #ffbf00;
-      padding: 10px;
-      margin: 10px 0;
-      font-size: 0.9rem;
-    }
+      .note {
+        background-color: #fff4e5;
+        border-left: 4px solid #ffbf00;
+        padding: 10px;
+        margin: 10px 0;
+        font-size: 0.9rem;
+      }
 
-    .feature-list {
-      list-style-type: none;
-      padding-left: 20px;
-    }
+      .feature-list {
+        list-style-type: none;
+        padding-left: 20px;
+      }
 
-    .feature-list li {
-      margin: 5px 0;
-    }
+      .feature-list li {
+        margin: 5px 0;
+      }
 
-    .enum-list {
-      list-style-type: square;
-      padding-left: 40px;
-    }
+      .enum-list {
+        list-style-type: square;
+        padding-left: 40px;
+      }
 
-    .enum-list li {
-      margin: 5px 0;
-    }
+      .enum-list li {
+        margin: 5px 0;
+      }
 
-    .field-list {
-      list-style-type: none;
-      padding-left: 20px;
-    }
+      .field-list {
+        list-style-type: none;
+        padding-left: 20px;
+      }
 
-    .field-list li {
-      margin: 5px 0;
-      color: #333;
-    }
-  </style>
-</head>
-<body>
+      .field-list li {
+        margin: 5px 0;
+        color: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Chat Features Model Explanation</h1>
+    </header>
 
-<header>
-  <h1>Chat Features Model Explanation</h1>
-</header>
+    <div class="container">
+      <!-- User Model Section -->
+      <div class="model-section">
+        <h3>1. User Model</h3>
+        <p>
+          The <span class="highlight">User</span> model represents the users of the chat
+          application. It contains essential information about the user.
+        </p>
+        <p>Fields in the User model:</p>
+        <ul class="field-list">
+          <li><strong>id:</strong> The unique identifier for the user (UUID).</li>
+          <li><strong>name:</strong> The user's display name.</li>
+          <li>
+            <strong>email:</strong> The user's email address (used for login and
+            notifications).
+          </li>
+          <li><strong>password:</strong> The user's encrypted password.</li>
+          <li><strong>avatar:</strong> URL of the user's profile picture.</li>
+          <li>
+            <strong>role:</strong> The role of the user (GUEST, USER, ADMIN) (Enum).
+          </li>
+          <li>
+            <strong>status:</strong> The user's current status (ONLINE, OFFLINE, IDLE)
+            (Enum).
+          </li>
+          <li><strong>createdAt:</strong> Timestamp when the user was created.</li>
+          <li><strong>updatedAt:</strong> Timestamp of the last user update.</li>
+          <li>
+            <strong>memberships:</strong> The list of chats the user is a member of
+            (ChatMember relation).
+          </li>
+          <li>
+            <strong>messages:</strong> The list of messages sent by the user (Message
+            relation).
+          </li>
+          <li>
+            <strong>chatsAdministered:</strong> Chats where the user is an admin (Chat
+            relation).
+          </li>
+        </ul>
+        <div class="note">
+          <strong>Note:</strong> The <span class="highlight">role</span> field uses an
+          enum to define user roles in the application.
+        </div>
+      </div>
 
-<div class="container">
-  <!-- User Model Section -->
-  <div class="model-section">
-    <h3>1. User Model</h3>
-    <p>The <span class="highlight">User</span> model represents the users of the chat application. It contains essential information about the user.</p>
-    <p>Fields in the User model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the user (UUID).</li>
-      <li><strong>username:</strong> The user's display name.</li>
-      <li><strong>email:</strong> The user's email address (used for login and notifications).</li>
-      <li><strong>password:</strong> The user's encrypted password.</li>
-      <li><strong>avatar:</strong> URL of the user's profile picture.</li>
-      <li><strong>role:</strong> The role of the user (GUEST, USER, ADMIN) (Enum).</li>
-      <li><strong>status:</strong> The user's current status (ONLINE, OFFLINE, IDLE) (Enum).</li>
-      <li><strong>createdAt:</strong> Timestamp when the user was created.</li>
-      <li><strong>updatedAt:</strong> Timestamp of the last user update.</li>
-      <li><strong>memberships:</strong> The list of chats the user is a member of (ChatMember relation).</li>
-      <li><strong>messages:</strong> The list of messages sent by the user (Message relation).</li>
-      <li><strong>chatsAdministered:</strong> Chats where the user is an admin (Chat relation).</li>
-    </ul>
-    <div class="note">
-      <strong>Note:</strong> The <span class="highlight">role</span> field uses an enum to define user roles in the application.
+      <!-- Chat Model Section -->
+      <div class="model-section">
+        <h3>2. Chat Model</h3>
+        <p>
+          The <span class="highlight">Chat</span> model represents the core structure of
+          each chat in the application, whether it's a group chat or direct chat.
+        </p>
+        <p>Fields in the Chat model:</p>
+        <ul class="field-list">
+          <li><strong>id:</strong> The unique identifier for the chat (UUID).</li>
+          <li><strong>name:</strong> The name of the chat (optional for group chats).</li>
+          <li>
+            <strong>isGroup:</strong> A boolean flag that distinguishes between a group
+            chat and a direct chat.
+          </li>
+          <li><strong>adminId:</strong> The user ID of the chat admin.</li>
+          <li><strong>admin:</strong> A reference to the admin user (User relation).</li>
+          <li>
+            <strong>members:</strong> A list of users who are part of the chat (ChatMember
+            relation).
+          </li>
+          <li>
+            <strong>messages:</strong> A list of messages associated with the chat
+            (Message relation).
+          </li>
+          <li><strong>createdAt:</strong> Timestamp when the chat was created.</li>
+          <li><strong>updatedAt:</strong> Timestamp of the last chat update.</li>
+        </ul>
+      </div>
+
+      <!-- ChatMember Model Section -->
+      <div class="model-section">
+        <h3>3. ChatMember Model</h3>
+        <p>
+          The <span class="highlight">ChatMember</span> model tracks which users are
+          members of a chat. It ensures that a user cannot join the same chat twice.
+        </p>
+        <p>Fields in the ChatMember model:</p>
+        <ul class="field-list">
+          <li>
+            <strong>id:</strong> The unique identifier for the chat membership (UUID).
+          </li>
+          <li>
+            <strong>userId:</strong> The unique identifier for the user (User relation).
+          </li>
+          <li>
+            <strong>chatId:</strong> The unique identifier for the chat (Chat relation).
+          </li>
+          <li><strong>joinedAt:</strong> Timestamp when the user joined the chat.</li>
+        </ul>
+      </div>
+
+      <!-- Message Model Section -->
+      <div class="model-section">
+        <h3>4. Message Model</h3>
+        <p>
+          The <span class="highlight">Message</span> model represents a message sent in a
+          chat. It contains both the content and additional attributes like media or
+          reactions.
+        </p>
+        <p>Fields in the Message model:</p>
+        <ul class="field-list">
+          <li><strong>id:</strong> The unique identifier for the message (UUID).</li>
+          <li><strong>content:</strong> The content of the message (text).</li>
+          <li>
+            <strong>senderId:</strong> The ID of the user who sent the message (User
+            relation).
+          </li>
+          <li>
+            <strong>sender:</strong> A reference to the sender user (User relation).
+          </li>
+          <li>
+            <strong>chatId:</strong> The ID of the chat the message belongs to (Chat
+            relation).
+          </li>
+          <li><strong>chat:</strong> A reference to the chat (Chat relation).</li>
+          <li>
+            <strong>media:</strong> Media files attached to the message (Media relation,
+            optional).
+          </li>
+          <li>
+            <strong>reactions:</strong> Reactions to the message (Reaction relation,
+            optional).
+          </li>
+          <li>
+            <strong>status:</strong> The message status (SENT, DELIVERED, READ) (Enum).
+          </li>
+          <li><strong>createdAt:</strong> Timestamp when the message was sent.</li>
+          <li><strong>updatedAt:</strong> Timestamp of the last message update.</li>
+        </ul>
+      </div>
+
+      <!-- Media Model Section -->
+      <div class="model-section">
+        <h3>5. Media Model</h3>
+        <p>
+          The <span class="highlight">Media</span> model stores files (images, videos,
+          etc.) attached to messages.
+        </p>
+        <p>Fields in the Media model:</p>
+        <ul class="field-list">
+          <li><strong>id:</strong> The unique identifier for the media (UUID).</li>
+          <li>
+            <strong>messageId:</strong> The ID of the message the media belongs to
+            (Message relation).
+          </li>
+          <li>
+            <strong>type:</strong> The type of media (e.g., 'image', 'video', 'audio').
+          </li>
+          <li><strong>size:</strong> The size of the media file in bytes.</li>
+          <li><strong>url:</strong> The URL of the uploaded media.</li>
+          <li><strong>caption:</strong> An optional caption for the media.</li>
+        </ul>
+      </div>
+
+      <!-- Reaction Model Section -->
+      <div class="model-section">
+        <h3>6. Reaction Model</h3>
+        <p>
+          The <span class="highlight">Reaction</span> model stores reactions (like emojis)
+          made by users to messages.
+        </p>
+        <p>Fields in the Reaction model:</p>
+        <ul class="field-list">
+          <li><strong>id:</strong> The unique identifier for the reaction (UUID).</li>
+          <li>
+            <strong>messageId:</strong> The ID of the message the reaction belongs to
+            (Message relation).
+          </li>
+          <li>
+            <strong>userId:</strong> The ID of the user who made the reaction (User
+            relation).
+          </li>
+          <li><strong>emoji:</strong> The emoji or symbol representing the reaction.</li>
+        </ul>
+      </div>
+
+      <!-- MessageSeen Model Section -->
+      <div class="model-section">
+        <h3>7. MessageSeen Model</h3>
+        <p>
+          The <span class="highlight">MessageSeen</span> model tracks when a user has seen
+          a message, allowing the application to determine which messages have been read.
+        </p>
+        <p>Fields in the MessageSeen model:</p>
+        <ul class="field-list">
+          <li>
+            <strong>id:</strong> The unique identifier for the message seen entry (UUID).
+          </li>
+          <li>
+            <strong>messageId:</strong> The ID of the message that was seen (Message
+            relation).
+          </li>
+          <li>
+            <strong>userId:</strong> The ID of the user who viewed the message (User
+            relation).
+          </li>
+          <li><strong>seenAt:</strong> The timestamp when the message was seen.</li>
+        </ul>
+      </div>
+
+      <!-- Enum Definitions Section -->
+      <div class="model-section">
+        <h3>8. Enum Definitions</h3>
+        <p>Here are the enums used in the models:</p>
+        <h4>Role Enum</h4>
+        <ul class="enum-list">
+          <li><strong>GUEST:</strong> A guest user with limited access.</li>
+          <li><strong>USER:</strong> A regular user with chat access.</li>
+          <li><strong>ADMIN:</strong> An admin user with management privileges.</li>
+        </ul>
+
+        <h4>Status Enum</h4>
+        <ul class="enum-list">
+          <li><strong>ONLINE:</strong> The user is currently online.</li>
+          <li><strong>OFFLINE:</strong> The user is offline.</li>
+          <li><strong>IDLE:</strong> The user is idle.</li>
+        </ul>
+
+        <h4>MessageStatus Enum</h4>
+        <ul class="enum-list">
+          <li><strong>SENT:</strong> The message has been sent but not delivered.</li>
+          <li>
+            <strong>DELIVERED:</strong> The message has been delivered to the recipient.
+          </li>
+          <li><strong>READ:</strong> The message has been read by the recipient.</li>
+        </ul>
+      </div>
+
+      <div class="note">
+        <strong>Note:</strong> All models are related to each other, allowing efficient
+        management of users, chats, messages, media files, reactions, and message
+        statuses.
+      </div>
     </div>
-  </div>
-
-  <!-- Chat Model Section -->
-  <div class="model-section">
-    <h3>2. Chat Model</h3>
-    <p>The <span class="highlight">Chat</span> model represents the core structure of each chat in the application, whether it's a group chat or direct chat.</p>
-    <p>Fields in the Chat model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the chat (UUID).</li>
-      <li><strong>name:</strong> The name of the chat (optional for group chats).</li>
-      <li><strong>isGroup:</strong> A boolean flag that distinguishes between a group chat and a direct chat.</li>
-      <li><strong>adminId:</strong> The user ID of the chat admin.</li>
-      <li><strong>admin:</strong> A reference to the admin user (User relation).</li>
-      <li><strong>members:</strong> A list of users who are part of the chat (ChatMember relation).</li>
-      <li><strong>messages:</strong> A list of messages associated with the chat (Message relation).</li>
-      <li><strong>createdAt:</strong> Timestamp when the chat was created.</li>
-      <li><strong>updatedAt:</strong> Timestamp of the last chat update.</li>
-    </ul>
-  </div>
-
-  <!-- ChatMember Model Section -->
-  <div class="model-section">
-    <h3>3. ChatMember Model</h3>
-    <p>The <span class="highlight">ChatMember</span> model tracks which users are members of a chat. It ensures that a user cannot join the same chat twice.</p>
-    <p>Fields in the ChatMember model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the chat membership (UUID).</li>
-      <li><strong>userId:</strong> The unique identifier for the user (User relation).</li>
-      <li><strong>chatId:</strong> The unique identifier for the chat (Chat relation).</li>
-      <li><strong>joinedAt:</strong> Timestamp when the user joined the chat.</li>
-    </ul>
-  </div>
-
-  <!-- Message Model Section -->
-  <div class="model-section">
-    <h3>4. Message Model</h3>
-    <p>The <span class="highlight">Message</span> model represents a message sent in a chat. It contains both the content and additional attributes like media or reactions.</p>
-    <p>Fields in the Message model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the message (UUID).</li>
-      <li><strong>content:</strong> The content of the message (text).</li>
-      <li><strong>senderId:</strong> The ID of the user who sent the message (User relation).</li>
-      <li><strong>sender:</strong> A reference to the sender user (User relation).</li>
-      <li><strong>chatId:</strong> The ID of the chat the message belongs to (Chat relation).</li>
-      <li><strong>chat:</strong> A reference to the chat (Chat relation).</li>
-      <li><strong>media:</strong> Media files attached to the message (Media relation, optional).</li>
-      <li><strong>reactions:</strong> Reactions to the message (Reaction relation, optional).</li>
-      <li><strong>status:</strong> The message status (SENT, DELIVERED, READ) (Enum).</li>
-      <li><strong>createdAt:</strong> Timestamp when the message was sent.</li>
-      <li><strong>updatedAt:</strong> Timestamp of the last message update.</li>
-    </ul>
-  </div>
-
-  <!-- Media Model Section -->
-  <div class="model-section">
-    <h3>5. Media Model</h3>
-    <p>The <span class="highlight">Media</span> model stores files (images, videos, etc.) attached to messages.</p>
-    <p>Fields in the Media model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the media (UUID).</li>
-      <li><strong>messageId:</strong> The ID of the message the media belongs to (Message relation).</li>
-      <li><strong>type:</strong> The type of media (e.g., 'image', 'video', 'audio').</li>
-      <li><strong>size:</strong> The size of the media file in bytes.</li>
-      <li><strong>url:</strong> The URL of the uploaded media.</li>
-      <li><strong>caption:</strong> An optional caption for the media.</li>
-    </ul>
-  </div>
-
-  <!-- Reaction Model Section -->
-  <div class="model-section">
-    <h3>6. Reaction Model</h3>
-    <p>The <span class="highlight">Reaction</span> model stores reactions (like emojis) made by users to messages.</p>
-    <p>Fields in the Reaction model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the reaction (UUID).</li>
-      <li><strong>messageId:</strong> The ID of the message the reaction belongs to (Message relation).</li>
-      <li><strong>userId:</strong> The ID of the user who made the reaction (User relation).</li>
-      <li><strong>emoji:</strong> The emoji or symbol representing the reaction.</li>
-    </ul>
-  </div>
-
-  <!-- MessageSeen Model Section -->
-  <div class="model-section">
-    <h3>7. MessageSeen Model</h3>
-    <p>The <span class="highlight">MessageSeen</span> model tracks when a user has seen a message, allowing the application to determine which messages have been read.</p>
-    <p>Fields in the MessageSeen model:</p>
-    <ul class="field-list">
-      <li><strong>id:</strong> The unique identifier for the message seen entry (UUID).</li>
-      <li><strong>messageId:</strong> The ID of the message that was seen (Message relation).</li>
-      <li><strong>userId:</strong> The ID of the user who viewed the message (User relation).</li>
-      <li><strong>seenAt:</strong> The timestamp when the message was seen.</li>
-    </ul>
-  </div>
-
-  <!-- Enum Definitions Section -->
-  <div class="model-section">
-    <h3>8. Enum Definitions</h3>
-    <p>Here are the enums used in the models:</p>
-    <h4>Role Enum</h4>
-    <ul class="enum-list">
-      <li><strong>GUEST:</strong> A guest user with limited access.</li>
-      <li><strong>USER:</strong> A regular user with chat access.</li>
-      <li><strong>ADMIN:</strong> An admin user with management privileges.</li>
-    </ul>
-
-    <h4>Status Enum</h4>
-    <ul class="enum-list">
-      <li><strong>ONLINE:</strong> The user is currently online.</li>
-      <li><strong>OFFLINE:</strong> The user is offline.</li>
-      <li><strong>IDLE:</strong> The user is idle.</li>
-    </ul>
-
-    <h4>MessageStatus Enum</h4>
-    <ul class="enum-list">
-      <li><strong>SENT:</strong> The message has been sent but not delivered.</li>
-      <li><strong>DELIVERED:</strong> The message has been delivered to the recipient.</li>
-      <li><strong>READ:</strong> The message has been read by the recipient.</li>
-    </ul>
-  </div>
-
-  <div class="note">
-    <strong>Note:</strong> All models are related to each other, allowing efficient management of users, chats, messages, media files, reactions, and message statuses.
-  </div>
-</div>
-
-</body>
+  </body>
 </html>

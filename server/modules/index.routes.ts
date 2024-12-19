@@ -6,7 +6,7 @@ const mainRoutes = express.Router();
 mainRoutes.get("/", (req, res) => {
   res.json({ message: "Chat Server is running!" });
 });
-mainRoutes.use("/user", UserRoutes);
+mainRoutes.use("/auth", UserRoutes);
 mainRoutes.use("/chat", ChatRoutes);
 mainRoutes.use("/message", MessageRoutes);
 

@@ -1,12 +1,6 @@
 import type { RequestHandler } from "express";
 import * as userService from "./user.services";
-import {
-  forgetPasswordSchema,
-  LoginSchema,
-  RegisterSchema,
-  resetPasswordSchema,
-} from "./user.dtos";
-import { uploadSingleFile } from "../../config/cloudinary.config";
+import { RegisterSchema } from "./user.dtos";
 import { sendEmail } from "../../config/mailer.config";
 import { envConfig } from "../../config/env.config";
 import prisma from "../../libs/prisma";
@@ -14,23 +8,16 @@ import { AppError } from "../../middlewares/errors-handle.middleware";
 //** Register user */
 const register: RequestHandler = async (req, res, next) => {
   try {
-    const { username, email, password } = RegisterSchema.parse(req.body);
-    const result = await uploadSingleFile(req);
-    const user = await userService.createUser({
-      username,
-      email,
-      password,
-      avatar: result.secure_url,
-    });
+    const user = await userService.createUser(req);
     const link = `${envConfig.clientUrl}/verify-email/${user.id}`;
     await sendEmail(
-      email,
-      user.username || "User",
+      user.email,
+      user.name || "User",
       "Verify Your Email",
       `Click the link below to Verify Your Email",: ${link}`,
       link
     );
-    res.status(201).json(user);
+    res.status(201).json({ message: `Verification Email Sent to ${user.email}`, user });
   } catch (err) {
     next(err);
   }
@@ -39,11 +26,7 @@ const register: RequestHandler = async (req, res, next) => {
 //** Login user */
 const login: RequestHandler = async (req, res, next) => {
   try {
-    const { email, password } = LoginSchema.parse(req.body);
-    const { user, accessToken, refreshToken, ...rest } = await userService.loginUser({
-      email,
-      password,
-    });
+    const { user, accessToken, refreshToken, ...rest } = await userService.loginUser(req);
 
     // Set cookies on client
     userService.setCookies(res, accessToken, refreshToken);
@@ -101,8 +84,7 @@ const deleteUser: RequestHandler = async (req, res, next) => {
 //** Forgot password */
 const forgotPassword: RequestHandler = async (req, res, next) => {
   try {
-    const { email } = forgetPasswordSchema.parse(req.body);
-    await userService.generateResetToken(email);
+    await userService.generateResetToken(req);
     res.status(200).json({ message: "Reset token sent to your email" });
   } catch (error) {
     next(error);
@@ -112,9 +94,7 @@ const forgotPassword: RequestHandler = async (req, res, next) => {
 //** Reset password */
 const resetPassword: RequestHandler = async (req, res, next) => {
   try {
-    const { newPassword } = resetPasswordSchema.parse(req.body);
-    const { token } = req.params;
-    await userService.resetPassword(token, newPassword);
+    await userService.resetPassword(req);
     res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
     next(error);

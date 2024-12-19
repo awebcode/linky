@@ -8,8 +8,9 @@ import type { Role, User } from "@prisma/client";
 import { envConfig } from "../../config/env.config";
 import { getCookieOptions } from "../../config/cookie.config";
 import { sendEmail } from "../../config/mailer.config";
-import { type LoginDTO, type RegisterDTO, UpdateUserSchema } from "./user.dtos";
+import {  generateResetTokenSchema, LoginSchema, RegisterSchema, resetPasswordSchema, UpdateUserSchema } from "./user.dtos";
 import { deleteFile, uploadSingleFile } from "../../config/cloudinary.config";
+import { forgotPassword } from "./user.controllers";
 
 /**
  * Utility Functions
@@ -26,7 +27,7 @@ const generateHash = async (password: string) => {
  * @param {string} type - Type of token (access or refresh)
  * @returns {string} - JWT token
  */
-const generateToken = async (
+const generateToken =  (
   payload: { id: string; role: Role },
   expiresIn: string,
   type: "access" | "refresh"
@@ -55,9 +56,9 @@ const formatTokens = (accessToken: string, refreshToken: string) => ({
 // Format user data for response
 const userResponse = (user: User) => ({
   id: user.id,
-  username: user.username,
+  name: user.name,
   email: user.email,
-  avatar: user.avatar,
+  image: user.image,
   role: user.role,
   status: user.status,
   lastSeenAt: user.lastSeenAt,
@@ -85,34 +86,34 @@ const clearCookies = (res: Response) => {
  */
 
 // Register a new user
-const createUser = async ({ username, email, password, avatar }: RegisterDTO) => {
+const createUser = async (req: Request) => {
+  const { name, email, password } = RegisterSchema.parse(req.body);
+  let result 
+
+  if (req.file) {
+    result = await uploadSingleFile(req);
+  }
+
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     throw new AppError("User already exists", 400);
   }
 
   return prisma.user.create({
-    data: { username, email, password: await generateHash(password), avatar },
+    data: { name, email, password: await generateHash(password), image:result? result.secure_url:"" },
   });
 };
 
 // Login an existing user
-const loginUser = async ({ email, password }: LoginDTO) => {
+const loginUser = async (req: Request) => {
+  const { email, password } = LoginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw new AppError("Invalid credentials", 401);
   }
   const tokenPayload = { id: user.id, role: user.role };
-  const accessToken = await generateToken(
-    tokenPayload,
-    "1h",
-    "access"
-  );
-  const refreshToken = await generateToken(
-    tokenPayload,
-    "7d",
-    "refresh"
-  );
+  const accessToken =  generateToken(tokenPayload, "1h", "access");
+  const refreshToken =  generateToken(tokenPayload, "7d", "refresh");
   return { user: userResponse(user), ...formatTokens(accessToken, refreshToken) };
 };
 
@@ -145,9 +146,9 @@ const updateUser = async (req: Request) => {
   const user = await prisma.user.findUnique({ where: { id: id } });
 
   if (req.file && user) {
-    await deleteFile(user.avatar);
+    await deleteFile(user.image);
     const result = await uploadSingleFile(req);
-    data.avatar = result.secure_url;
+    data.image = result.secure_url;
   }
   if (data.password) {
     data.password = await generateHash(data.password as string);
@@ -167,7 +168,8 @@ const updateUser = async (req: Request) => {
  */
 
 // Generate reset token for password recovery
-const generateResetToken = async (email: string) => {
+const generateResetToken = async (req: Request) => {
+  const { email } = generateResetTokenSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
   if (!user) {
     throw new AppError("User does not exist", 404);
@@ -185,7 +187,7 @@ const generateResetToken = async (email: string) => {
   const link = `${envConfig.clientUrl}/reset-password/${token}`;
   await sendEmail(
     email,
-    user.username || "User",
+    user.name || "User",
     "Reset Your Password",
     `Click the link below to reset your password: ${link}`,
     link
@@ -193,15 +195,16 @@ const generateResetToken = async (email: string) => {
 };
 
 // Reset the user's password
-const resetPassword = async (token: string, newPassword: string) => {
-  const user = await prisma.user.findUnique({ where: { resetToken: token } });
+const resetPassword = async (req: Request) => {
+  const { token, newPassword } = resetPasswordSchema.parse(req.body);
+  const user = await prisma.user.findFirst({ where: { resetToken: token } });
   if (!user || (user.resetTokenExpiry && user.resetTokenExpiry < new Date())) {
     throw new AppError("Invalid or expired token", 400);
   }
 
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   await prisma.user.update({
-    where: { resetToken: token },
+    where: { id: user.id },
     data: { password: hashedPassword, resetToken: null, resetTokenExpiry: null },
   });
 };

@@ -19,10 +19,12 @@ const setupMiddlewares = (app: express.Application) => {
   app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
   // CORS setup
-  app.use(cors(config.corsOptions));
+  app.use(cors({ ...config.corsOptions }));
 
   // Cookie parser middleware
   app.use(cookieParser());
+
+ 
 
   // Helmet for security
   app.use(config.helmet());

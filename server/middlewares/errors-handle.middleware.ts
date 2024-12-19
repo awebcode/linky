@@ -36,7 +36,6 @@ export const errorHandler = (
   // Format the error message and get status code
   const message = formatErrorMessage(err);
   const statusCode = getStatusCode(err);
-
   // Log error details
   loggerInstance.error(
     `Error at ${req.method} ${req.originalUrl}: ${message}`, 
@@ -58,5 +57,5 @@ export const NotFoundExceptionMiddleware = (
   _: Response,
   next: NextFunction
 ) => {
-  next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404));
+  next(new AppError(`Route ${req.originalUrl} not found`, 404));
 };
