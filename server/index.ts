@@ -18,6 +18,7 @@ setupMiddlewares(app);
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Linky Server is running"});
 })
+
 // Routes
 app.use("/api/v1", mainRoutes);
 

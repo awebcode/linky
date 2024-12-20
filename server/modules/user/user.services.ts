@@ -88,15 +88,16 @@ const clearCookies = (res: Response) => {
 // Register a new user
 const createUser = async (req: Request) => {
   const { name, email, password } = RegisterSchema.parse(req.body);
-  let result 
-
-  if (req.file) {
-    result = await uploadSingleFile(req);
-  }
+  
 
   const existingUser = await prisma.user.findUnique({ where: { email } });
   if (existingUser) {
     throw new AppError("User already exists", 400);
+  }
+  
+  let result;
+  if (req.file) {
+    result = await uploadSingleFile(req);
   }
 
   return prisma.user.create({
@@ -111,10 +112,13 @@ const loginUser = async (req: Request) => {
   if (!user || !(await bcrypt.compare(password, user.password))) {
     throw new AppError("Invalid credentials", 401);
   }
-  const tokenPayload = { id: user.id, role: user.role };
-  const accessToken =  generateToken(tokenPayload, "1h", "access");
-  const refreshToken =  generateToken(tokenPayload, "7d", "refresh");
-  return { user: userResponse(user), ...formatTokens(accessToken, refreshToken) };
+  // const tokenPayload = { id: user.id, role: user.role };
+  // const accessToken =  generateToken(tokenPayload, "1h", "access");
+  // const refreshToken =  generateToken(tokenPayload, "7d", "refresh");
+  return {
+    user: userResponse(user),
+    // ...formatTokens(accessToken, refreshToken)
+  };
 };
 
 // Get user by ID
@@ -184,7 +188,7 @@ const generateResetToken = async (req: Request) => {
     },
   });
 
-  const link = `${envConfig.clientUrl}/reset-password/${token}`;
+  const link = `${envConfig.clientUrl}/reset-password?token=${token}`;
   await sendEmail(
     email,
     user.name || "User",
@@ -192,6 +196,8 @@ const generateResetToken = async (req: Request) => {
     `Click the link below to reset your password: ${link}`,
     link
   );
+
+  return email
 };
 
 // Reset the user's password

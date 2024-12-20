@@ -1,13 +1,14 @@
+import { cn } from "@/lib/utils";
 import React from "react";
-interface HeadingProps extends React.HtmlHTMLAttributes<HTMLHeadingElement> {
+interface HeadingProps extends React.HtmlHTMLAttributes<HTMLDivElement> {
   title: string;
   desc: string;
 }
-const Heading = ({ title, desc }: HeadingProps) => {
+const Heading = ({ title, desc, className, ...props }: HeadingProps) => {
   return (
-    <div>
-      <h1 className="text-3xl font-bold">{title}</h1>
-      <p className="text-sm text-muted-foreground">{desc}</p>
+    <div className={cn("w-full primary p-4 rounded-t-lg", className)} {...props}>
+      <h2 className="text-2xl font-bold">{title}</h2>
+      <p className="text-sm">{desc}</p>
     </div>
   );
 };

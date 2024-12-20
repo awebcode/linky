@@ -4,7 +4,7 @@ import { useFormContext } from "react-hook-form";
 import { ErrorMessage } from "@hookform/error-message";
 import { FormDescription, FormItem, FormLabel } from "@/components/ui/form";
 import { EyeIcon, EyeOffIcon } from "lucide-react";
-import { Button } from "../ui/button";
+import { Button } from "../../ui/button";
 import type { TextInputProps } from "@/types/index.types";
 
 const TextInput: React.FC<TextInputProps> = ({

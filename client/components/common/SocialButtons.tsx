@@ -6,13 +6,13 @@ import { FaGoogle } from "react-icons/fa";
 interface Props {
   isSignIn?: boolean;
 }
-const AuthButtons: React.FC<Props> = ({ isSignIn = true }) => {
+const SocialButtons: React.FC<Props> = ({ isSignIn = true }) => {
   return (
-    <div className="flex items-center flex-wrap gap-2">
+    <div className="flex items-center flex-wrap my-2 gap-2">
       {/* Google Sign-In/Sign-Up Button */}
       <Button
         onClick={() => signIn("google")}
-        className="flex items-center justify-center w-full p-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none transition duration-200"
+        className="w-full bg-background text-accent-foreground shadow-xl"
       >
         <FaGoogle className="mr-2" />
         Sign {isSignIn ? "in" : "up"} with Google
@@ -21,7 +21,7 @@ const AuthButtons: React.FC<Props> = ({ isSignIn = true }) => {
       {/* GitHub Sign-In/Sign-Up Button */}
       <Button
         onClick={() => signIn("github")}
-        className="flex items-center justify-center w-full p-3 bg-card-foreground text-card rounded-lg  focus:outline-none transition duration-200"
+        className="w-full bg-foreground text-background shadow-xl"
       >
         <Github className="mr-2" size={20} />
         Sign {isSignIn ? "in" : "up"} with GitHub
@@ -30,4 +30,4 @@ const AuthButtons: React.FC<Props> = ({ isSignIn = true }) => {
   );
 };
 
-export default AuthButtons;
+export default SocialButtons;

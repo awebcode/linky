@@ -2,7 +2,7 @@ import { UploadCloud } from "lucide-react";
 import React from "react";
 import { useDropzone, type Accept } from "react-dropzone";
 import { z } from "zod";
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 import { toast } from "@/hooks/use-toast";
 
 // Define your Zod schema for file validation
@@ -25,14 +25,13 @@ export const fileSchema = z.object({
     ),
 });
 
-
 interface FileInputProps {
   onDrop: (acceptedFiles: File[]) => void;
   accept?: Accept;
 }
 
 const FileInput: React.FC<FileInputProps> = ({ onDrop, accept }) => {
-  const { getRootProps, getInputProps, isDragActive,acceptedFiles } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({
     accept,
     onDrop: (acceptedFiles) => {
       // Validate files using Zod
@@ -54,7 +53,7 @@ const FileInput: React.FC<FileInputProps> = ({ onDrop, accept }) => {
           toast({
             title: "Error Accepting Files",
             description: "An unexpected error occurred.",
-          })
+          });
         }
       }
     },

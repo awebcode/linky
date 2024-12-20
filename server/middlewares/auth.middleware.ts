@@ -4,7 +4,6 @@ import { AppError } from "./errors-handle.middleware";
 import { envConfig } from "../config/env.config";
 import type { Role } from "@prisma/client";
 import * as userService from "../modules/user/user.services";
-
 const tokenCache = new Map<string, JwtPayload>();
 interface UserJwtPayload extends JwtPayload {
   id: string;
@@ -17,54 +16,49 @@ export const authMiddleware = async (
 ): Promise<void> => {
   try {
     const accessToken = extractTokenFromCookies(req, "access_token");
-
+    if (!accessToken) {
+      throw new AppError("Please login to continue!", 401);
+    }
     // Use cached token if available
-    if (
-      accessToken &&
-      isTokenValid(accessToken, envConfig.jwtSecret) &&
-      tokenCache.has(accessToken)
-    ) {
+    if (accessToken && tokenCache.has(accessToken)) {
       req.user = tokenCache.get(accessToken) as UserJwtPayload;
       return next();
     }
 
-    if (accessToken) {
-      try {
-        const decoded = jwt.verify(accessToken, envConfig.jwtSecret) as UserJwtPayload;
-        tokenCache.set(accessToken, decoded);
-        req.user = decoded;
-        return next();
-      } catch {}
-    }
+    const decoded = jwt.verify(accessToken, envConfig.jwtSecret) as UserJwtPayload;
+    tokenCache.set(accessToken, decoded);
+    req.user = decoded;
+    return next();
 
     // Refresh token logic
-    const refreshToken = extractTokenFromCookies(req, "refresh_token");
-    if (!refreshToken || !isTokenValid(refreshToken, envConfig.refreshTokenSecret))
-      throw new AppError("Please login to continue!", 401);
+    // const refreshToken = extractTokenFromCookies(req, "refresh_token");
 
-    const refreshTokenPayload = jwt.verify(
-      refreshToken,
-      envConfig.refreshTokenSecret
-    ) as UserJwtPayload;
+    // if (!refreshToken || !isTokenValid(refreshToken, envConfig.refreshTokenSecret)) {
+    //   throw new AppError("Please login to continue!", 401);
+    // }
+    // const refreshTokenPayload = jwt.verify(
+    //   refreshToken,
+    //   envConfig.refreshTokenSecret
+    // ) as UserJwtPayload;
 
-    const { exp, ...tokenPayloadWithoutExp } = refreshTokenPayload;
+    // const { exp, ...tokenPayloadWithoutExp } = refreshTokenPayload;
 
-    const newAccessToken = await userService.generateToken(
-      tokenPayloadWithoutExp,
-      "1h",
-      "access"
-    );
-    const newRefreshToken = await userService.generateToken(
-      tokenPayloadWithoutExp,
-      "7d",
-      "refresh"
-    );
+    // const newAccessToken = await userService.generateToken(
+    //   tokenPayloadWithoutExp,
+    //   "1h",
+    //   "access"
+    // );
+    // const newRefreshToken = await userService.generateToken(
+    //   tokenPayloadWithoutExp,
+    //   "7d",
+    //   "refresh"
+    // );
 
-    userService.setCookies(res, newAccessToken, newRefreshToken);
+    // userService.setCookies(res, newAccessToken, newRefreshToken);
 
-    tokenCache.set(newAccessToken, refreshTokenPayload);
-    req.user = refreshTokenPayload;
-    next();
+    // tokenCache.set(newAccessToken, refreshTokenPayload);
+    // req.user = refreshTokenPayload;
+    // next();
   } catch (error) {
     next(error);
   }
@@ -84,8 +78,6 @@ const isTokenValid = (token: string, secret: string): boolean => {
   }
 };
 
-
-
 // Roles middleware with RequestHandler type
 export const rolesMiddleware = (allowedRoles: Role[]): RequestHandler => {
   return (req, res, next) => {
@@ -98,4 +90,3 @@ export const rolesMiddleware = (allowedRoles: Role[]): RequestHandler => {
     next(); // User has one of the allowed roles, proceed to the next middleware/route handler
   };
 };
-

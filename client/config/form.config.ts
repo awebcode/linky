@@ -1,5 +1,6 @@
 import type { AxiosMethod, TextInputProps } from "@/types/index.types";
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
   type SchemaType,
@@ -7,6 +8,7 @@ import {
 interface FormConfig {
   method: AxiosMethod;
   endpoint: string; // API endpoint
+  btnText: string;
   successMessage: string; // Success message to display
   successMessageDescription?: string;
   errorMessage?: string;
@@ -16,41 +18,18 @@ interface FormConfig {
 }
 
 export const formConfigs: Record<string, FormConfig> = {
-  login: {
+  
+  forgot: {
     method: "post",
-    endpoint: "/auth/login",
-    successMessage: "Login successful",
-    successMessageDescription: "You are now logged in",
-    errorMessage: "Login failed",
-    redirectPath: "/chat",
-    schema: loginSchema,
-    fields: [
-      { name: "email", label: "Email", type: "email", description: "Enter your email" },
-      {
-        name: "password",
-        label: "Password",
-        type: "password",
-        description: "Enter your password",
-      },
-    ],
-  },
-  register: {
-    method: "post",
-    endpoint: "/auth/register",
-    successMessage: "Registration successful",
-    successMessageDescription: "You are now registered",
-    errorMessage: "Registration failed",
+    endpoint: "/auth/forgot-password",
+    btnText: "Send Reset Link",
+    successMessage: "Password reset link sent",
+    successMessageDescription: "Please check your email",
+    errorMessage: "Password reset failed",
     redirectPath: "/?tab=login",
-    schema: registerSchema,
+    schema: forgotPasswordSchema,
     fields: [
-      { name: "name", label: "Name", type: "text", description: "Enter your full name" },
       { name: "email", label: "Email", type: "email", description: "Enter your email" },
-      {
-        name: "password",
-        label: "Password",
-        type: "password",
-        description: "Create a strong password",
-      },
     ],
   },
 };

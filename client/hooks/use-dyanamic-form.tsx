@@ -7,5 +7,6 @@ export const useDynamicForm = (formType: keyof typeof formConfigs) => {
     ...useFormMutation(config), // Returns mutation logic
     fields: config.fields, // Returns fields for the form
     schema: config.schema,
+    btnText: config.btnText,
   };
 };

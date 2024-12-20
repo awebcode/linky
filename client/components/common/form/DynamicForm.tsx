@@ -3,8 +3,7 @@ import FormValidated from "./FormValidated";
 import type { formConfigs } from "@/config/form.config";
 
 const DynamicForm = ({ formType }: { formType: keyof typeof formConfigs }) => {
-  const { mutate, error, isPending, fields, schema } = useDynamicForm(formType);
-
+  const { mutate, error, isPending, fields, schema, btnText } = useDynamicForm(formType);
   return (
     <FormValidated
       schema={schema}
@@ -12,7 +11,7 @@ const DynamicForm = ({ formType }: { formType: keyof typeof formConfigs }) => {
       onSubmit={mutate}
       error={error}
       isPending={isPending}
-      submitButtonLabel={formType === "login" ? "Login" : "Register"}
+      submitButtonLabel={btnText}
     />
   );
 };

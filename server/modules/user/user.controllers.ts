@@ -26,12 +26,17 @@ const register: RequestHandler = async (req, res, next) => {
 //** Login user */
 const login: RequestHandler = async (req, res, next) => {
   try {
-    const { user, accessToken, refreshToken, ...rest } = await userService.loginUser(req);
+    const { user, ...rest } = await userService.loginUser(req);
 
     // Set cookies on client
-    userService.setCookies(res, accessToken, refreshToken);
+    // userService.setCookies(res, accessToken, refreshToken);
 
-    res.status(200).json({ user, ...rest });
+    res
+      .status(200)
+      .json({
+        message: "Login Successfully ",
+        user: { ...user, ...rest },
+      });
   } catch (err) {
     next(err);
   }
@@ -84,8 +89,8 @@ const deleteUser: RequestHandler = async (req, res, next) => {
 //** Forgot password */
 const forgotPassword: RequestHandler = async (req, res, next) => {
   try {
-    await userService.generateResetToken(req);
-    res.status(200).json({ message: "Reset token sent to your email" });
+   const email = await userService.generateResetToken(req);
+    res.status(200).json({ message: `Password reset link sent to ${email}` });
   } catch (error) {
     next(error);
   }
@@ -95,7 +100,7 @@ const forgotPassword: RequestHandler = async (req, res, next) => {
 const resetPassword: RequestHandler = async (req, res, next) => {
   try {
     await userService.resetPassword(req);
-    res.status(200).json({ message: "Password reset successfully" });
+    res.status(200).json({ message: "Password reset successfully, please login" });
   } catch (error) {
     next(error);
   }

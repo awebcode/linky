@@ -5,7 +5,7 @@ import type { FieldValues } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import type { AxiosMethod } from "@/types/index.types";
 type UseFormMutationParams = {
-    method:AxiosMethod
+  method:AxiosMethod
   endpoint: string; // API endpoint
   successMessage?: string;
   successMessageDescription?: string;
