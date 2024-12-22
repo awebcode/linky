@@ -1,16 +1,24 @@
-# use the official Bun image
-# see all versions at https://hub.docker.com/r/oven/bun/tags
+# Use the official Bun image
+# See all versions at https://hub.docker.com/r/oven/bun/tags
 FROM oven/bun:1 AS base
+
+# Set the working directory inside the container
 WORKDIR /usr/src/app
 
-
-COPY package.json bun.lockb 
+# Copy only necessary files for installation
+COPY package.json bun.lockb ./
 COPY prisma ./prisma/
 
-RUN  bun install 
-RUN  bun run migrate:deploy
+# Install dependencies and apply Prisma migrations
+RUN bun install
+RUN bun run migrate:deploy
+
+# Copy all server files
 COPY . .
 
+# Set environment variables and expose the port
 ENV NODE_ENV=production
 EXPOSE 5000
+
+# Set the entrypoint for the server
 ENTRYPOINT [ "bun", "run", "index.ts" ]
