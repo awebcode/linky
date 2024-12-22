@@ -9,7 +9,7 @@ const config = {
   rateLimit: rateLimitConfig,
   logger: loggerInstance,
   corsOptions: {
-    origin: ["*", envConfig.clientUrl, "http://localhost:3001"],
+    origin: ["*", envConfig.clientUrl,...envConfig.production_clientUrls, "http://localhost:3001"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],

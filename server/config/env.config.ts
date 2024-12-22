@@ -1,6 +1,6 @@
 export const envConfig = {
   clientUrl: process.env.CLIENT_URL || "http://localhost:3000",
-
+  production_clientUrls: process.env.PRODUCTION_CLIENT_URLS || [],
   jwtSecret: process.env.AUTH_SECRET ||"secret",
 
   refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET || "secret",
