@@ -1,10 +1,9 @@
-import type { ChatThread } from "@/components/chat/v0/types";
 export const currentUser = {
     id: "1",
     name: "You",
     avatar: "/placeholder.svg",
 }
-export const sampleChats: ChatThread[] = [
+export const sampleChats = [
   {
     id: "1",
     user: {
