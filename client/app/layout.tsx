@@ -46,12 +46,12 @@ export default async function RootLayout({ children }: Props) {
           <QueryProvider>
             <SessionProvider session={session}>
               <main className="flex-grow">{children}</main>
-              <Toaster   />
+              <Toaster />
 
-              <footer>
+              {/* <footer>
                 {" "}
                 <Footer />{" "}
-              </footer>
+              </footer> */}
             </SessionProvider>
           </QueryProvider>
           <ScrollToTop />

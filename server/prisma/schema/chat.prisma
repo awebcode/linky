@@ -1,8 +1,8 @@
 model Chat {
-  id          String       @id @default(uuid()) @map("_id")
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
   name        String
   description String?
-  adminId     String
+  adminId     String       @db.ObjectId
   admin       User         @relation(fields: [adminId], references: [id], onDelete: Cascade)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -12,9 +12,9 @@ model Chat {
 }
 
 model ChatMember {
-  id       String   @id @default(uuid()) @map("_id")
-  userId   String
-  chatId   String
+id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId   String     @db.ObjectId
+  chatId   String      @db.ObjectId
   joinedAt DateTime @default(now())
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   chat     Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)

@@ -21,4 +21,4 @@ const useRegisterMutation = (redirectPath?: string) =>
     redirectPath
   );
 
-export default useRegisterMutation
+export default useRegisterMutation;

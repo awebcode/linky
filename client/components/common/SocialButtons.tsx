@@ -11,6 +11,7 @@ const SocialButtons: React.FC<Props> = ({ isSignIn = true }) => {
     <div className="flex items-center flex-wrap my-2 gap-2">
       {/* Google Sign-In/Sign-Up Button */}
       <Button
+        type="button"
         onClick={() => signIn("google")}
         className="w-full bg-background text-accent-foreground shadow-xl"
       >
@@ -20,6 +21,7 @@ const SocialButtons: React.FC<Props> = ({ isSignIn = true }) => {
 
       {/* GitHub Sign-In/Sign-Up Button */}
       <Button
+        type="button"
         onClick={() => signIn("github")}
         className="w-full bg-foreground text-background shadow-xl"
       >

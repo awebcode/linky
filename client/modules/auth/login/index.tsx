@@ -18,7 +18,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 const Login = () => {
-  const loginMutation = useLoginMutation();
+  const loginMutation = useLoginMutation("/chat");
 
   const onSubmit = (data: LoginFormValues) => {
     loginMutation.mutate(data);

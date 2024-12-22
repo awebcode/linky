@@ -1,8 +1,8 @@
 model User {
-  id            String    @id @default(uuid()) @map("_id")
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   email         String    @unique
-  password      String
+  password      String?
   image         String    @default("")
   role          Role      @default(USER)
   status        Status    @default(OFFLINE)
@@ -12,7 +12,7 @@ model User {
   emailVerified DateTime?
 
   verified          Boolean         @default(false)
-  resetToken        String?        
+  resetToken        DateTime?       @unique @default(now())
   resetTokenExpiry  DateTime?
   providerId        String?         @default("credential")
   accounts          Account[]
@@ -24,12 +24,13 @@ model User {
   chatsAdministered Chat[]
   seenMessages      MessageSeen[]
   reactions         Reaction[]
+
   @@map("users")
 }
 
 model Account {
   id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  userId            String  
+  userId            String  @db.ObjectId
   type              String
   provider          String
   providerAccountId String
@@ -53,12 +54,13 @@ model Account {
 model Session {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionToken String   @unique
-  userId       String  
+  userId       String   @db.ObjectId
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
   @@map("sessions")
 }
 
@@ -74,7 +76,7 @@ model VerificationToken {
 // Optional for WebAuthn support
 model Authenticator {
   credentialID         String  @id @map("_id")
-  userId               String  
+  userId               String  @db.ObjectId
   providerAccountId    String
   credentialPublicKey  String
   counter              Int

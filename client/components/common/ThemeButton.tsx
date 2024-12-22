@@ -11,7 +11,7 @@ const themeOptions = {
   system: <Laptop className="icon-drop-shadow " />,
 };
 
-const ThemeToggle = () => {
+const ThemeButton = () => {
   const { setTheme, theme: currentTheme } = useTheme();
   const [isInitialRender, setIsInitialRender] = React.useState(false);
   React.useEffect(() => {
@@ -43,4 +43,4 @@ const ThemeToggle = () => {
   );
 };
 
-export default ThemeToggle;
+export default ThemeButton;

@@ -1,19 +1,12 @@
 import useCustomMutationHook from "@/hooks/use-custom-mutation";
 import { toast } from "@/hooks/use-toast";
 import { signIn } from "next-auth/react";
+import { loginUser } from "./login.actions";
 
 const useLoginMutation = (redirectPath?: string) =>
   useCustomMutationHook(
     async (credentials: { email: string; password: string }) => {
-      const response = await signIn("credentials", {
-        email: credentials.email,
-        password: credentials.password,
-        redirect: false,
-      });
-      if (!response?.ok) {
-        throw new Error(response?.error || "Login failed");
-      }
-      return response;
+      return await loginUser(credentials.email, credentials.password);
     },
     {
       onSuccess: () => {
@@ -23,7 +16,13 @@ const useLoginMutation = (redirectPath?: string) =>
           description: "You have successfully logged in",
         });
       },
-      
+      onError: (error: any) => {
+        toast({
+          title: "Login failed",
+          description: error?.message,
+          variant: "destructive",
+        });
+      },
     },
 
     redirectPath

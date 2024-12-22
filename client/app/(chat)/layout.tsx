@@ -1,9 +1,8 @@
-import React from "react";
-interface Props {
-  children: React.ReactNode;
-}
-const ChatLayout: React.FC<Props> = ({ children }) => {
-  return <div> chat layout {children}</div>;
-};
+// import ChatMainLayout from "./ChatMainLayout";
 
-export default ChatLayout;
+import ChatLayoutDynamic from "./ChatLayoutDynamic";
+
+
+export default function ChatLayout({ children }: { children: React.ReactNode }) {
+  return <ChatLayoutDynamic>{children}</ChatLayoutDynamic>;
+}
