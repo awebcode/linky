@@ -19,7 +19,7 @@ export function UserList({ users }: UserListProps) {
                 <UserAvatar
                   size="sm"
                   src={user?.image}
-                  fallback={user.name}
+                  fallback={user?.name}
                 />
                 <span
                   className={cn(

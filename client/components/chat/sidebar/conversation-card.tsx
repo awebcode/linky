@@ -53,18 +53,19 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
             </div>
           </div>
         </div>
-        <ContextMenuContent>
-          <ContextMenuItem>View Profile</ContextMenuItem>
-          <ContextMenuItem>Call</ContextMenuItem>
-          <ContextMenuItem>Mute</ContextMenuItem>
-          <ContextMenuItem>Block</ContextMenuItem>
-
-          <ContextMenuItem>Report</ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem>Delete Conversation</ContextMenuItem>
-          <ContextMenuItem>Clear Chat History</ContextMenuItem>
-        </ContextMenuContent>
       </ContextMenuTrigger>
+
+      <ContextMenuContent>
+        <ContextMenuItem>View Profile</ContextMenuItem>
+        <ContextMenuItem>Call</ContextMenuItem>
+        <ContextMenuItem>Mute</ContextMenuItem>
+        <ContextMenuItem>Block</ContextMenuItem>
+
+        <ContextMenuItem>Report</ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem>Delete Conversation</ContextMenuItem>
+        <ContextMenuItem>Clear Chat History</ContextMenuItem>
+      </ContextMenuContent>
     </ContextMenu>
   );
 }

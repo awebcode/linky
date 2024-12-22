@@ -13,9 +13,9 @@ export function UserProfile() {
   return (
     <div className="p-4 border-b flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <UserAvatar src={user?.image} fallback={user.name} />
+        <UserAvatar src={user?.image} fallback={user?.name} />
         <div>
-          <h3 className="font-medium">{user.name}</h3>
+          <h3 className="font-medium">{user?.name}</h3>
           <p className="text-sm text-muted-foreground">{user.status}</p>
         </div>
       </div>
