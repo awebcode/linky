@@ -121,7 +121,7 @@ const SidebarProvider = React.forwardRef<
         state,
         open,
         setOpen,
-        isMobile,
+        isMobile: isMobile as boolean,
         openMobile,
         setOpenMobile,
         toggleSidebar,
