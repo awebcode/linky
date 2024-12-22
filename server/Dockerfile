@@ -11,7 +11,6 @@ COPY prisma ./prisma/
 
 # Install dependencies and apply Prisma migrations
 RUN bun install
-RUN bun run migrate:deploy
 
 # Copy all server files
 COPY . .
