@@ -10,13 +10,15 @@ import { userMenuItems } from "@/constants/chat/menus";
 
 export function UserProfile() {
   const { user } = useUser();
+  console.log({user})
+  if(!user) return null
   return (
     <div className="p-4 border-b flex items-center justify-between">
       <div className="flex items-center gap-3">
         <UserAvatar src={user?.image} fallback={user?.name} />
         <div>
           <h3 className="font-medium">{user?.name}</h3>
-          <p className="text-sm text-muted-foreground">{user.status}</p>
+          <p className="text-sm text-muted-foreground">{user?.status}</p>
         </div>
       </div>
       <UserActionDropdown

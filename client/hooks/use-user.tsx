@@ -13,7 +13,7 @@ export const useUser = () => {
   useEffect(() => {
     if (!isLoading && !user) {
       // If not authenticated and not loading, redirect to login page
-      router.push("/login");
+      router.push("/");
     }
   }, [isLoading, user, router]);
 
