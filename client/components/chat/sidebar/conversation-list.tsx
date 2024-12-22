@@ -2,6 +2,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar } from "@/components/ui/avatar";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import UserAvatar from "@/components/common/UserAvatar";
 
 interface Conversation {
   id: number;
@@ -29,7 +30,7 @@ export function ConversationList({ conversations }: ConversationListProps) {
               className="w-full p-2 flex items-center gap-3 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <div className="relative">
-                <Avatar user={{ ...conversation, id: conversation.id }} />
+                <UserAvatar size="sm" src={conversation.avatar} fallback={conversation.name} />
                 <span className={cn(
                   "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white",
                   conversation.isOnline ? "bg-green-500" : "bg-gray-300"
