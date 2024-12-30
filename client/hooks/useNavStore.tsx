@@ -1,26 +1,40 @@
 import { create } from "zustand";
 import { MessageSquare, Phone, Users, Bell, Settings, UserCog } from "lucide-react";
 import { createJSONStorage, persist } from "zustand/middleware";
+
+// NavId type from NAVIGATION_MENUS
+
+export interface Nav {
+  id: NavId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  navPosition: NavPosition;
+  isMobile: boolean;
+}
+
 // Zustand store for active Nav
 interface NavState {
   activeNav: NavId;
-  setActiveNav: (Nav: NavId) => void;
+  setActiveNav: (nav: NavId) => void;
 }
 
 export const useNavStore = create<NavState>()(
   persist(
     (set) => ({
       activeNav: "chats", // Default Nav
-      setActiveNav: (Nav) => set({ activeNav: Nav }),
+      setActiveNav: (nav) => set({ activeNav: nav }),
     }),
     {
-      name: "nav-storage", // Key used to store the state in localStorage or sessionStorage
-      storage: createJSONStorage(() => sessionStorage), // (optional) by default, 'localStorage' is used
+      name: "nav-storage", // Key used to store the state in sessionStorage
+      storage: createJSONStorage(() => sessionStorage), // Use sessionStorage instead of localStorage
     }
   )
 );
 
-export const NAVIGATION_MENUS: Nav[] = [
+// Type definitions
+export type NavPosition = "top" | "middle" | "bottom";
+
+export const NAVIGATION_MENUS = [
   {
     id: "chats",
     label: "Chats",
@@ -70,16 +84,6 @@ export const NAVIGATION_MENUS: Nav[] = [
     navPosition: "bottom",
     isMobile: true, // Hide on mobile
   },
-];
+] as const;
 
-
-export type NavId = "chats" | "groups" | "profile"| "calls" | "contacts" | "notifications" | "settings";
-export type navPosition = "top" | "middle" | "bottom";
-
-export interface Nav {
-  id: NavId;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  navPosition: navPosition;
-  isMobile: boolean;
-}
+export type NavId = (typeof NAVIGATION_MENUS)[number]["id"]; // Infer

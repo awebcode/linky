@@ -6,12 +6,11 @@ import {
   MarkMessageAsSeenSchema,
 } from "./message.dtos";
 import { uploadMultipleFiles } from "../../config/cloudinary.config";
-import { AppError } from "../../middlewares/errors-handle.middleware";
 
 const createMessage = async (req: Request) => {
+
   const { content, chatId } = CreateMessageSchema.parse(req.body);
   const senderId = req.user.id;
-
   if (req.files && (req.files as Express.Multer.File[]).length) {
     const uploadedFiles = await uploadMultipleFiles(req);
     return await prisma.message.create({

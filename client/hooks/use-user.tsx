@@ -1,8 +1,8 @@
 import { signOut, useSession } from "next-auth/react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { User } from "@prisma/client";
 import { toast } from "./use-toast";
+import type { UserSessionResponse } from "@/types/user";
 export const useUser = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -18,7 +18,7 @@ export const useUser = () => {
   }, [isLoading, user, router]);
 
   return {
-    user: user as Omit<User, "password">,
+    user: user as UserSessionResponse,
     isLoading: false,
     isAuthenticated: true,
   };

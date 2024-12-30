@@ -1,49 +1,83 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import UserAvatar from "@/components/common/UserAvatar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { useChatStore } from "@/hooks/useChatStore";
 import { cn } from "@/lib/utils";
+import type { ChatConversation } from "@/types/chat";
 import { formatDistanceToNow } from "date-fns";
+import { useShallow } from "zustand/react/shallow";
+import { useMessageStore } from "@/hooks/useMessageStorage";
 
 interface ConversationCardProps {
-  conversation: {
-    id: number;
-    name: string;
-    avatar: string;
-    lastMessage: string;
-    timestamp: Date;
-    unreadCount: number;
-    isOnline: boolean;
-  };
+  conversation: ChatConversation;
 }
 
 export function ConversationCard({ conversation }: ConversationCardProps) {
+  const setSelectedChat = useChatStore((state) => state.setSelectedChat);
+  const selectedChat = useChatStore(useShallow((state) => state.selectedChat));
+  const { message } = useMessageStore(useShallow((state) => state));
+
+  const {
+    isGroup,
+    groupInfo: { groupId, groupName, groupImage },
+    user: { status, name, image },
+  } = conversation;
+
+  // Get the draft message for the current conversation
+  const draftMessage = message[conversation.id] || "";
+
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        <div className="p-2 hover:bg-accent rounded-lg cursor-pointer transition-colors">
+        <div
+          onClick={() => setSelectedChat(conversation)}
+          className={cn(
+            " p-2 my-1 hover:bg-accent dark:hover:bg-gray-900 rounded-lg cursor-pointer transition-colors",
+            { "bg-gray-200 dark:bg-gray-800": selectedChat?.id === conversation.id }
+          )}
+        >
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <Avatar>
-                <AvatarImage src={conversation.avatar} alt={conversation.name} />
-                <AvatarFallback>{conversation.name[0]}</AvatarFallback>
-              </Avatar>
-              <span
-                className={cn(
-                  "absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background",
-                  conversation.isOnline ? "bg-green-500" : "bg-muted"
-                )}
+            {isGroup ? (
+              <UserAvatar
+                src={groupImage}
+                fallback={groupName}
+                isOnline={false} // Groups don't have online status
+                size="md"
               />
-            </div>
+            ) : (
+              <UserAvatar
+                src={image}
+                fallback={name}
+                isOnline={status === "ONLINE"}
+                size="md"
+              />
+            )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium truncate">{conversation.name}</h3>
+                <h3 className="font-medium text-sm truncate">{isGroup ? groupName : name}</h3>
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(conversation.timestamp, { addSuffix: true })}
+                  {formatDistanceToNow(conversation.timestamp as any, {
+                    addSuffix: true,
+                  })}
                 </span>
               </div>
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground truncate">
-                  {conversation.lastMessage}
-                </p>
+              <div className="flex items-center justify-between max-w-full">
+                {draftMessage ? (
+                  <>
+                    <p className="text-sm  truncate font-semibold">
+                      <span className="text-primary"> Draft:</span> {draftMessage}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground truncate">
+                    {conversation.lastMessage?.content}
+                  </p>
+                )}
                 {conversation.unreadCount > 0 && (
                   <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
                     {conversation.unreadCount}
@@ -56,14 +90,22 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
       </ContextMenuTrigger>
 
       <ContextMenuContent>
-        <ContextMenuItem>View Profile</ContextMenuItem>
-        <ContextMenuItem>Call</ContextMenuItem>
-        <ContextMenuItem>Mute</ContextMenuItem>
-        <ContextMenuItem>Block</ContextMenuItem>
-
-        <ContextMenuItem>Report</ContextMenuItem>
+        <ContextMenuItem>{isGroup ? "View Group Info" : "View Profile"}</ContextMenuItem>
+        {isGroup ? (
+          <>
+            <ContextMenuItem>Leave Group</ContextMenuItem>
+          </>
+        ) : (
+          <>
+            <ContextMenuItem>Call</ContextMenuItem>
+            <ContextMenuItem>Mute</ContextMenuItem>
+            <ContextMenuItem>Block</ContextMenuItem>
+          </>
+        )}
         <ContextMenuSeparator />
-        <ContextMenuItem>Delete Conversation</ContextMenuItem>
+        <ContextMenuItem>
+          {isGroup ? "Delete Group Chat" : "Delete Conversation"}
+        </ContextMenuItem>
         <ContextMenuItem>Clear Chat History</ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

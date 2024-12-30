@@ -10,7 +10,6 @@ import { userMenuItems } from "@/constants/chat/menus";
 
 export function UserProfile() {
   const { user } = useUser();
-  console.log({user})
   if(!user) return null
   return (
     <div className="p-4 border-b flex items-center justify-between">

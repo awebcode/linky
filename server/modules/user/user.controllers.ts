@@ -1,10 +1,11 @@
 import type { RequestHandler } from "express";
 import * as userService from "./user.services";
-import { RegisterSchema } from "./user.dtos";
 import { sendEmail } from "../../config/mailer.config";
 import { envConfig } from "../../config/env.config";
 import prisma from "../../libs/prisma";
 import { AppError } from "../../middlewares/errors-handle.middleware";
+import { getCookieOptions } from "../../config/cookie.config";
+import * as userUtility from "./user.utils";
 //** Register user */
 const register: RequestHandler = async (req, res, next) => {
   try {
@@ -30,7 +31,7 @@ const login: RequestHandler = async (req, res, next) => {
 
     // Set cookies on client
     // userService.setCookies(res, accessToken, refreshToken);
-
+   res.cookie("access_token", rest.accessToken, getCookieOptions(60 * 60)); // 1 hour
     res
       .status(200)
       .json({
@@ -45,7 +46,7 @@ const login: RequestHandler = async (req, res, next) => {
 //** Logout user */
 const logout: RequestHandler = async (req, res, next) => {
   try {
-    userService.clearCookies(res);
+    userUtility.clearCookies(res);
     res.status(200).json({ message: "Logout successful" });
   } catch (err) {
     next(err);

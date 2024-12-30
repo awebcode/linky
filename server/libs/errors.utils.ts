@@ -41,6 +41,7 @@ export const extractErrorLine = (stack: string | undefined): string =>
 
 // Function to format Prisma errors with specific meta information
 const formatPrismaError = (err: Prisma.PrismaClientKnownRequestError): string => {
+ console.log({ errCode:err.code, errMeta:err.meta })
   const Default_Field_Type = "field";
   switch (err.code) {
     case "P2002": {
@@ -79,6 +80,13 @@ const formatPrismaError = (err: Prisma.PrismaClientKnownRequestError): string =>
       const relation = err.meta?.relation_name || "relation";
       return `Relation violation: Issue in ${relation}, check related table constraints.`;
     }
+      case "P2015": {
+        const field = err.meta?.column_name || Default_Field_Type;
+        return `Value too long for ${field}: Adjust input length.`;
+    }
+      case "P2023": {
+        return err?.meta?.message as string|| "Record not found";
+      }
     default:
       return `Database error: ${err.message}`;
   }

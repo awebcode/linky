@@ -40,7 +40,7 @@ export const uploadMultipleFiles = async (req: Request) => {
       try {
         // Upload the file to Cloudinary
         const result = await cloudinary.uploader.upload(file.path, {
-          folder: "linky", // Optional: Specify a folder in Cloudinary
+          folder: "linky",
         });
 
         // Remove the file from the local storage
@@ -60,6 +60,7 @@ export const uploadMultipleFiles = async (req: Request) => {
 
   return uploadedFiles;
 };
+
 
 export const deleteFile = async (secureUrl: string) => {
   try {

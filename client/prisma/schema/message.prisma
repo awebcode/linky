@@ -2,7 +2,7 @@ model Message {
   id          String        @id @default(auto()) @map("_id") @db.ObjectId
   content     String
   senderId    String        @db.ObjectId
-  chatId      String         @db.ObjectId
+  chatId      String        @db.ObjectId
   sentAt      DateTime      @default(now())
   status      MessageStatus @default(SENT)
   sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -13,8 +13,8 @@ model Message {
 }
 
 model Media {
- id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  messageId String @db.ObjectId
+  id        String  @id @default(auto()) @map("_id") @db.ObjectId
+  messageId String  @db.ObjectId
   type      String? // e.g., 'image', 'video', 'audio', 'document'
   size      Int? // File size in bytes
   url       String // URL of the uploaded media
@@ -23,9 +23,9 @@ model Media {
 }
 
 model Reaction {
- id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  messageId String @db.ObjectId
-  userId    String @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  messageId String   @db.ObjectId
+  userId    String   @db.ObjectId
   emoji     String // e.g., "👍", "❤️", "😂"
   createdAt DateTime @default(now())
 
@@ -36,9 +36,9 @@ model Reaction {
 }
 
 model MessageSeen {
- id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  messageId String @db.ObjectId
-  userId    String @db.ObjectId
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  messageId String   @db.ObjectId
+  userId    String   @db.ObjectId
   seenAt    DateTime @default(now())
   message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

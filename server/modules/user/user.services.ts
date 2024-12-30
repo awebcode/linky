@@ -1,85 +1,14 @@
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import { randomBytes } from "crypto";
 import prisma from "../../libs/prisma";
 import { AppError } from "../../middlewares/errors-handle.middleware";
-import type { Request, Response } from "express";
-import type { Role, User } from "@prisma/client";
+import type { Request } from "express";
 import { envConfig } from "../../config/env.config";
-import { getCookieOptions } from "../../config/cookie.config";
 import { sendEmail } from "../../config/mailer.config";
 import {  generateResetTokenSchema, LoginSchema, RegisterSchema, resetPasswordSchema, UpdateUserSchema } from "./user.dtos";
 import { deleteFile, uploadSingleFile } from "../../config/cloudinary.config";
-import { forgotPassword } from "./user.controllers";
-
-/**
- * Utility Functions
- */
-
-// Generate hashed password
-const generateHash = async (password: string) => {
-  return await bcrypt.hash(password, 12);
-};
-
-/** Generate JWT token
- * @param {object} payload - Payload for the token
- * @param {string} expiresIn - Expiration time for the token
- * @param {string} type - Type of token (access or refresh)
- * @returns {string} - JWT token
- */
-const generateToken =  (
-  payload: { id: string; role: Role },
-  expiresIn: string,
-  type: "access" | "refresh"
-) => {
-  const secret = type === "access" ? envConfig.jwtSecret : envConfig.refreshTokenSecret;
-  return jwt.sign(payload, secret, { expiresIn });
-};
-
-// Verify JWT token
-const verifyToken = async (token: string, secret: string) => {
-  try {
-    return jwt.verify(token, secret);
-  } catch (error) {
-    throw new AppError("Invalid or expired token", 401);
-  }
-};
-
-// Format tokens for response
-const formatTokens = (accessToken: string, refreshToken: string) => ({
-  accessToken,
-  refreshToken,
-  expiresAccessTokenAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-  expiresRefreshTokenAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-});
-
-// Format user data for response
-const userResponse = (user: User) => ({
-  id: user.id,
-  name: user.name,
-  email: user.email,
-  image: user.image,
-  role: user.role,
-  status: user.status,
-  lastSeenAt: user.lastSeenAt,
-  createdAt: user.createdAt,
-});
-
-/**  Set cookies on the client
-  - access_token: 1 hour
-  - refresh_token: 7 days
-  @param {Response} res, accessToken, refreshToken
-*/
-const setCookies = (res: Response, accessToken: string, refreshToken: string) => {
-  res.cookie("access_token", accessToken, getCookieOptions(60 * 60)); // 1 hour
-  res.cookie("refresh_token", refreshToken, getCookieOptions(60 * 60 * 24 * 7)); // 7 days
-};
-
-// Clear cookies on the client
-const clearCookies = (res: Response) => {
-  res.cookie("access_token", "", getCookieOptions(0));
-  res.cookie("refresh_token", "", getCookieOptions(0));
-};
+import * as userUtility from "./user.utils";
+import { generateRandomAvatar } from "../chat/chat.utils";
 
 /**
  * User Operations
@@ -95,13 +24,12 @@ const createUser = async (req: Request) => {
     throw new AppError("User already exists", 400);
   }
   
-  let result;
-  if (req.file) {
-    result = await uploadSingleFile(req);
-  }
+  const image = req.file
+    ? await uploadSingleFile(req)
+    : generateRandomAvatar(name);
 
   return prisma.user.create({
-    data: { name, email, password: await generateHash(password), image:result? result.secure_url:"" },
+    data: { name, email, password: await userUtility.generateHash(password), image:typeof image === 'string' ? image : image.secure_url },
   });
 };
 
@@ -109,14 +37,15 @@ const createUser = async (req: Request) => {
 const loginUser = async (req: Request) => {
   const { email, password } = LoginSchema.parse(req.body);
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || !(await bcrypt.compare(password, user.password))) {
+  if (!user || !(await bcrypt.compare(password, user.password as string))) {
     throw new AppError("Invalid credentials", 401);
   }
-  // const tokenPayload = { id: user.id, role: user.role };
-  // const accessToken =  generateToken(tokenPayload, "1h", "access");
+  const tokenPayload = { id: user.id, role: user.role };
+  const accessToken =  userUtility.generateToken(tokenPayload, "1h", "access");
   // const refreshToken =  generateToken(tokenPayload, "7d", "refresh");
   return {
-    user: userResponse(user),
+    user: userUtility.userResponse(user),
+    accessToken,
     // ...formatTokens(accessToken, refreshToken)
   };
 };
@@ -127,7 +56,7 @@ const getUserById = async (id: string) => {
   if (!user) {
     throw new AppError("User not found", 404);
   }
-  return userResponse(user);
+  return userUtility.userResponse(user);
 };
 
 // Verify user email
@@ -155,7 +84,7 @@ const updateUser = async (req: Request) => {
     data.image = result.secure_url;
   }
   if (data.password) {
-    data.password = await generateHash(data.password as string);
+    data.password = await userUtility.generateHash(data.password as string);
   }
 
   if (data.email) {
@@ -226,18 +155,13 @@ const deleteUsers = async () => {
 export {
   createUser,
   loginUser,
-  generateToken,
-  verifyToken,
+ 
   verifyUser,
   updateUser,
-  formatTokens,
-  userResponse,
-  setCookies,
-  clearCookies,
+ 
   generateResetToken,
   resetPassword,
   getUserById,
-  generateHash,
   getUsers,
   deleteUsers,
 };

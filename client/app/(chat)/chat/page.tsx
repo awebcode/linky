@@ -4,7 +4,7 @@ import { ChatInput } from "@/components/chat/chat-input";
 import { ChatMessages } from "@/components/chat/chat-messages";
 
 // This would typically come from your database
-const messages= [
+const messages = [
   {
     id: 1,
     content: "Hey! How's it going?",
@@ -27,12 +27,8 @@ const messages= [
 
 export default function ChatPage() {
   return (
-    <div className="hidden md:flex flex-col h-full ">
-      <ChatHeader
-        avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"
-        name="Sarah Wilson"
-        status="Online"
-      />
+    <div className="flex flex-col h-full ">
+      <ChatHeader />
       <ChatMessages messages={messages} />
       <ChatInput onSendMessage={console.log} />
     </div>

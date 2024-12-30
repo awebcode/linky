@@ -1,30 +1,28 @@
 import { z } from "zod";
 
 // Base schema for common chat properties
-const ChatBaseSchema = z.object({
-  name: z.string().min(1, "Chat name is required"), // Common field for chat name
-  chatId: z.string().uuid("Invalid chat ID"), // Chat ID (optional in the base schema)
-  id: z.string().uuid("Invalid user ID"), // User ID (optional in the base schema)
+export const CreateChatSchema = z.object({
+  name: z.string().min(1, "Chat name is required"), // Ensure chat name is not empty
+  isGroupChat: z.boolean().optional(), // Whether the chat is a group chat or not
+  members: z.array(z.string()).min(1, "At least one member is required"), // Members are optional, but if provided, they should be an array of strings
 });
 
-// Schema for creating a chat
-export const CreateChatSchema = ChatBaseSchema.pick({
-  name: true,
+export const AddUserToChatSchema = z.object({
+  userId: z.string().uuid("Invalid user ID format"),
+  chatId: z.string().uuid("Invalid chat ID format"),
 });
 
-// Schema for adding a user to a chat
-export const AddUserToChatSchema = ChatBaseSchema.pick({
-  chatId: true,
-  id: true,
+export const GetChatsQuerySchema = z.object({
+  search: z.string().optional().default(""), // Default to an empty string if not provided
+  cursor: z.string().optional(), // Optional string for cursor (for pagination)
+  take: z
+    .string() // Accept `take` as a string
+    .optional()
+    .refine((value) => value === undefined || !isNaN(Number(value)), {
+      message: "Take must be a number",
+    }) // Check if it can be converted to a number
+    .transform((value) => (value !== undefined ? Number(value) : 10)) // Convert to number, default to 10
+    .refine((value) => value >= 1 && value <= 100, {
+      message: "Take must be between 1 and 100",
+    }), // Validate range after conversion
 });
-
-// Schema for updating a chat (partial schema for optional fields)
-export const UpdateChatSchema = ChatBaseSchema.partial({
-  name: true,
-  chatId: true,
-});
-
-// Infer DTO types from schemas
-export type CreateChatDTO = z.infer<typeof CreateChatSchema>;
-export type AddUserToChatDTO = z.infer<typeof AddUserToChatSchema>;
-export type UpdateChatDTO = z.infer<typeof UpdateChatSchema>;

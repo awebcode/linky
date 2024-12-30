@@ -67,6 +67,90 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-roboto scroll-smooth;
+    @apply bg-background text-foreground font-roboto scroll-smooth overflow-x-hidden;
   }
 }
+@layer utilities {
+  /* Custom Scrollbar Styles */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--secondary)) transparent;
+    transition: scrollbar-color 0.3s ease, background-color 0.3s ease; /* Smooth transition */
+  }
+
+  /* Webkit Scrollbar Styles */
+  .custom-scrollbar::-webkit-scrollbar {
+    @apply w-1.5; /* Custom scrollbar width */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent; /* Transparent track */
+    border-radius: 10px; /* Rounded corners for track */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/50; /* Default thumb color */
+    @apply rounded-full; /* Rounded thumb */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Smooth thumb transition */
+  }
+
+  /* Hover state */
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/70; /* Slightly darker thumb on hover */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15); /* Slightly more pronounced shadow */
+  }
+
+  /* Hover state for thumb */
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/80; /* Further darken the thumb on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* More pronounced shadow */
+  }
+
+  /* Dark Mode Custom Scrollbar */
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/60; /* Lighter thumb color in dark mode */
+  }
+
+  .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/80; /* Darker thumb on hover in dark mode */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); /* Pronounced shadow in dark mode */
+  }
+
+  /* Dark Mode hover effect */
+  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/90; /* Even darker thumb on hover in dark mode */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3); /* Stronger shadow in dark mode */
+  }
+}
+
+
+/* uppy images uploader scrollbar */
+/* Target the Uppy dashboard list container scrollbar */
+.uppy-Dashboard-AddFiles-list {
+ scrollbar-width: 0;
+}
+
+/* For WebKit browsers (Chrome, Edge, Safari) */
+.uppy-Dashboard-AddFiles-list::-webkit-scrollbar {
+  width: 6px; /* Scrollbar width */
+  scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  scroll-snap-align: center;
+}
+
+.uppy-Dashboard-AddFiles-list::-webkit-scrollbar-thumb {
+  background-color: #888; /* Scrollbar thumb color */
+  border-radius: 8px; /* Rounded corners for the thumb */
+}
+
+.uppy-Dashboard-AddFiles-list::-webkit-scrollbar-thumb:hover {
+  background-color: #555; /* Darker color on hover */
+}
+
+.uppy-Dashboard-AddFiles-list::-webkit-scrollbar-track {
+  background-color: #f1f1f1; /* Scrollbar track color */
+  border-radius: 8px; /* Rounded corners for the track */
+}
+
+

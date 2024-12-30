@@ -2,14 +2,13 @@ import { AuthError, type NextAuthConfig } from "next-auth";
 import Google from "next-auth/providers/google";
 import GitHub from "next-auth/providers/github";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
 import axiosInstance from "./axiosInstance";
 import { encodeJwt, verifyJwt } from "@/lib/utils";
 
 export default {
   providers: [
-    Google,
-    GitHub,
+    Google({ allowDangerousEmailAccountLinking: true }),
+    GitHub({ allowDangerousEmailAccountLinking: true }),
     Credentials({
       credentials: {
         email: { label: "Email", type: "email", placeholder: "Email" },
@@ -41,27 +40,33 @@ export default {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.name = user.name;
+        token.email = user.email;
+        token.image = user.image;
+        token.status = user.status;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token?.id) {
-        // Fetch user data from the database
-        const user = await prisma.user.findUnique({
-          where: { id: token.id as string },
-        });
-        if (user) {
-          const { password, ...rest } = user;
-          // Remove the password property directly
-          session.user = rest;
-        }
+      // Map all token properties to session.user
+      if (token) {
+        session.user = {
+          ...token, // Spread all properties from the token
+        } as any;
       }
       return session;
     },
   },
   jwt: {
-    encode: async ({ token, secret, maxAge = 30 * 24 * 60 * 60 }) => {
-      const payload = { id: token?.id, role: token?.role };
+    encode: async ({ token, secret }) => {
+      const payload = {
+        id: token?.id,
+        name: token?.name,
+        email: token?.email,
+        image: token?.image,
+        role: token?.role,
+        status: token?.status,
+      };
       return await encodeJwt({ payload, secret: secret as string });
     },
     decode: async ({ token, secret }) => {

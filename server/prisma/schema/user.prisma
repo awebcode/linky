@@ -6,26 +6,31 @@ model User {
   image         String    @default("")
   role          Role      @default(USER)
   status        Status    @default(OFFLINE)
-  lastSeenAt    DateTime  @default(now())
+  lastActive    DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   createdAt     DateTime  @default(now())
   emailVerified DateTime?
 
-  verified          Boolean         @default(false)
-  resetToken        DateTime?       @unique @default(now())
-  resetTokenExpiry  DateTime?
-  providerId        String?         @default("credential")
-  accounts          Account[]
-  sessions          Session[]
+  verified           Boolean              @default(false)
+  resetToken         DateTime?            @unique @default(now())
+  resetTokenExpiry   DateTime?
+  providerId         String?              @default("credential")
+  accounts           Account[]
+  sessions           Session[]
   // Optional for WebAuthn support
-  Authenticator     Authenticator[]
-  memberships       ChatMember[]
-  messages          Message[]
-  chatsAdministered Chat[]
-  seenMessages      MessageSeen[]
-  reactions         Reaction[]
+  Authenticator      Authenticator[]
+  memberships        ChatMember[]
+  messages           Message[]
+  chatsAdministered  Chat[]
+  seenMessages       MessageSeen[]
+  reactions          Reaction[]
+  NotificationStatus NotificationStatus[]
+  blockedUsers       BlockedUser[]        @relation("UserBlock") // Users blocked in chats
+  blockedByUsers     BlockedUser[]        @relation("BlockedByUser") // Chats where this user has blocked someone
+  ChatAdmin          ChatAdmin[]
 
   @@map("users")
+  @@index([status])
 }
 
 model Account {

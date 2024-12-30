@@ -1,5 +1,5 @@
 model User {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId 
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   email         String    @unique
   password      String?
@@ -11,19 +11,22 @@ model User {
   createdAt     DateTime  @default(now())
   emailVerified DateTime?
 
-  verified          Boolean         @default(false)
-  resetToken        DateTime?       @unique @default(now())
-  resetTokenExpiry  DateTime?
-  providerId        String?         @default("credential")
-  accounts          Account[]
-  sessions          Session[]
+  verified           Boolean              @default(false)
+  resetToken         DateTime?            @unique @default(now())
+  resetTokenExpiry   DateTime?
+  providerId         String?              @default("credential")
+  accounts           Account[]
+  sessions           Session[]
   // Optional for WebAuthn support
-  Authenticator     Authenticator[]
-  memberships       ChatMember[]
-  messages          Message[]
-  chatsAdministered Chat[]
-  seenMessages      MessageSeen[]
-  reactions         Reaction[]
+  Authenticator      Authenticator[]
+  memberships        ChatMember[]
+  messages           Message[]
+  chatsAdministered  Chat[]
+  seenMessages       MessageSeen[]
+  reactions          Reaction[]
+  NotificationStatus NotificationStatus[]
+  blockedUsers    BlockedUser[]      @relation("UserBlock")   // Users blocked in chats
+  blockedByUsers  BlockedUser[]      @relation("BlockedByUser") // Chats where this user has blocked someone
 
   @@map("users")
 }
@@ -54,7 +57,7 @@ model Account {
 model Session {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   sessionToken String   @unique
-  userId       String    @db.ObjectId
+  userId       String   @db.ObjectId
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
