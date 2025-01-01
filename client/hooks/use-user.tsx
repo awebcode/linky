@@ -14,6 +14,8 @@ export const useUser = () => {
     if (!isLoading && !user) {
       // If not authenticated and not loading, redirect to login page
       router.push("/");
+    } else {
+      localStorage.setItem("userId", user?.id as string);
     }
   }, [isLoading, user, router]);
 
@@ -30,7 +32,7 @@ export const handleLogout = async () => {
     title: "You have been logged out.",
     description: "You will be redirected to the home page.",
   });
-
+  localStorage.removeItem("userId");
   // Sign out and redirect to the home page
   await signOut({ redirectTo: "/" }); // prevent automatic redirect from signOut
 };

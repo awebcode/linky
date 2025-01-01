@@ -34,7 +34,7 @@ export function ChatHeader({}: ChatHeaderProps) {
   const {
     isGroup,
     user: { name, image, status },
-    groupInfo: { groupName, groupImage },
+    groupInfo,
   } = selectedChat;
 
   // Handle back button click to set selectedChat to null
@@ -52,12 +52,12 @@ export function ChatHeader({}: ChatHeaderProps) {
 
         {/* Avatar and Chat Info */}
         {isGroup ? (
-          <UserAvatar src={groupImage} fallback={groupName} />
+          <UserAvatar src={groupInfo?.groupImage} fallback={groupInfo?.groupName} />
         ) : (
           <UserAvatar src={image} fallback={name} />
         )}
         <div>
-          <h2 className="font-semibold">{isGroup ? groupName : name}</h2>
+          <h2 className="font-semibold">{isGroup ? groupInfo?.groupName : name}</h2>
           <p className="text-sm text-muted-foreground">
             {isGroup ? `${selectedChat.membersCount} members` : status}
           </p>

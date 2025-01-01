@@ -15,6 +15,7 @@ export const AddUserToChatSchema = z.object({
 export const GetChatsQuerySchema = z.object({
   search: z.string().optional().default(""), // Default to an empty string if not provided
   cursor: z.string().optional(), // Optional string for cursor (for pagination)
+  nextUnlistedCursor: z.string().optional(),
   take: z
     .string() // Accept `take` as a string
     .optional()

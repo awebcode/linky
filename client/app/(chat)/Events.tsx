@@ -1,17 +1,15 @@
 // components/Events.tsx
 "use client"; // This makes this component a client-side component
 import { useEffect, useRef } from "react";
-import { useIsOnline } from "@/hooks/use-online"; // Assuming useIsOnline is your hook for socket
 import { useSocket } from "@/hooks/use-socket";
+import { useUser } from "@/hooks/use-user";
 
 const Events = () => {
   const socket = useSocket(); // Assuming your hook connects the socket
-  useIsOnline();
+  const { user } = useUser();
   useEffect(() => {
-    if (socket) {
-      socket.on("some-event", (data) => {
-        console.log("Event received:", data);
-      });
+    if (socket && user) {
+      socket.emit("user-online", { userId: user.id });
     }
 
     // Cleanup when the component is unmounted
@@ -20,7 +18,7 @@ const Events = () => {
         socket.off("some-event");
       }
     };
-  }, [socket]);
+  }, [socket, user]);
 
   return null;
 };

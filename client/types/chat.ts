@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Status, type Message, type NotificationState } from "@prisma/client";
+import { Status, type NotificationState } from "@prisma/client";
 export interface User {
   id: number;
   name: string;
@@ -40,34 +40,81 @@ export type NotificationStatus = {
   mutedUntil: Date | null;
 };
 
+export interface ChatConversationUser {
+  id: string;
+  name: string;
+  image: string;
+  status: Status;
+}
+
+export interface Message {
+  id: string;
+  content: string;
+  sentAt: Date;
+  senderId: string;
+}
+
+
+
+export interface BlockedStatus {
+  status: "BLOCKED" | "NOT_BLOCKED"; // Indicates if the current user is blocked
+  blockedUntil: Date | null; // Date until the user is blocked
+  blockedBy: ChatConversationUser | null; // User who blocked the current user
+}
+
 export interface ChatConversation {
   id: string;
   nextCursor: string;
   totalCount: number;
+  unlistedUsers: ChatConversationUser[]; // Users not yet added to the chat (for search purposes)
+  nextUnlistedCursor: string | null; // Cursor for pagination in unlisted users
+
   isGroup: boolean;
+
+  // Group information (for group chats only)
   groupInfo: {
     groupId: string;
     groupName: string;
     groupImage: string;
-    timestamp: string | null;
-    createdAt: string;
-  };
+    createdAt: string; // ISO date string for when the group was created
+  } | null;
+
+  // The other user in the chat for 1:1 chats, or null for group chats
   user: ChatConversationUser;
+
+  // The last message in the chat, or null if there are no messages
   lastMessage: Message | null;
-  messages:Message[];
+
+  // Array of messages in the chat (the latest messages are included)
+  messages: Message[];
+
+  // Timestamp of the last message sent in the chat
   timestamp: string | null;
-  createdAt: string; // ISO string format for date
+
+  // Creation date of the chat (ISO string format)
+  createdAt: string;
+
+  // Number of unread messages in the chat for the current user
   unreadCount: number;
+
+  // Number of members in the chat
   membersCount: number;
+
+  // Number of admins in the group chat
   adminsCount: number;
+
+  // List of admins in the chat (only for group chats)
   admins: ChatConversationUser[];
 
+  // Notification status for the current user (e.g., muted)
   notificationStatus: NotificationStatus;
-  blockedStatus: {
-    status: "BLOCKED" | "NOT_BLOCKED";
-    blockedUntil: Date | null;
-    blockedBy: ChatConversationUser | null;
-  };
+
+  // Block status of the current user (for blocked users)
+  blockedStatus: BlockedStatus;
+
+  // The date when the chat was archived (null if not archived)
   archivedAt: Date | null;
+
+  // The date when the chat was pinned (null if not pinned)
   pinnedAt: Date | null;
 }

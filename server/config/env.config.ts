@@ -7,6 +7,7 @@ export const envConfig = {
   accessTokenExpiresIn: process.env.ACCESS_TOKEN_EXPIRE || 60 * 60,
   nodeEnv: process.env.NODE_ENV,
   databaseUrl: process.env.DATABASE_URL,
+  redisUrl: process.env.REDIS_URL,
   port: process.env.PORT || 5000,
   // logger
   logLevel: process.env.LOG_LEVEL || "info",

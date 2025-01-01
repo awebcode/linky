@@ -2,25 +2,35 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import axiosInstance from "@/config/axiosInstance";
 import type { ChatConversation } from "@/types/chat";
 import { useChatStore } from "../useChatStore";
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from "zustand/shallow";
+import type { UnlistedUser } from "@/types/user";
 
-// Fetch function to get chats with pagination and search
-const fetchChats = async ({
-  pageParam = 0,
+// Define the structure for the pagination cursor
+type PageParam = {
+  cursor: string | null;
+  nextUnlistedCursor: string | null;
+}|undefined;
+
+// Function to fetch chats and unlisted users
+const fetchChatsAndUnlistedUsers = async ({
+  pageParam = { cursor: null, nextUnlistedCursor: null },
   searchValue = "",
 }: {
-  pageParam?: number;
+  pageParam?: PageParam;
   searchValue?: string;
 }): Promise<{
   chats: ChatConversation[];
-  nextCursor: number | null;
+  nextCursor:string | null;
   totalCount: number;
+  unlistedUsers: UnlistedUser[];
+  nextUnlistedCursor: string | null;
 }> => {
   const { data } = await axiosInstance.get("/chat/get-chats", {
     params: {
-      cursor: pageParam !== 0 ? pageParam : undefined,
+      cursor: pageParam.cursor,
+      nextUnlistedCursor: pageParam.nextUnlistedCursor,
       take: 8,
-      search: searchValue || undefined, // Avoid sending empty search queries
+      search: searchValue || undefined,
     },
   });
   return data;
@@ -28,17 +38,23 @@ const fetchChats = async ({
 
 // Hook to fetch chats with react-query and update Zustand store
 export const useChats = () => {
-  const searchValue = useChatStore(useShallow((state) => state.searchValue)); // Zustand state
+  const searchValue = useChatStore(useShallow((state) => state.searchValue)); // Use Zustand state with shallow comparison
 
   return useInfiniteQuery({
     queryKey: ["chats", searchValue], // Include searchValue in the key to refetch on change
-    queryFn: ({ pageParam }) => fetchChats({ pageParam, searchValue }),
-    initialPageParam: 0, // Start with the first page
+    queryFn: ({ pageParam }: { pageParam?: PageParam }) => fetchChatsAndUnlistedUsers({ pageParam, searchValue }),
     getNextPageParam: (lastPage) => {
-      if (lastPage.nextCursor) {
-        return lastPage.nextCursor;
+      // Return the next page param structure, based on the previous page's response
+      if (lastPage.nextCursor != null || lastPage.nextUnlistedCursor != null) {
+        return {
+          cursor: lastPage.nextCursor,
+          nextUnlistedCursor: lastPage.nextUnlistedCursor,
+        };
       }
-    }, // Handle cases with no next cursor
+      return undefined; // No next page
+    },
+    initialPageParam: { cursor: null, nextUnlistedCursor: null }, // Start with null cursors for first page
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
+

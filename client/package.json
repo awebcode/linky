@@ -94,7 +94,7 @@
     "react-loader-spinner": "^6.1.6",
     "react-resizable-panels": "^2.1.7",
     "recharts": "^2.13.3",
-    "smiley-input": "^2.0.12",
+    "smiley-input": "^2.0.14",
     "socket.io-client": "^4.8.1",
     "sonner": "^1.7.0",
     "tailwind-merge": "^2.5.5",

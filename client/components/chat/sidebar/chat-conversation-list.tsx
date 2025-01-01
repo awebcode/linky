@@ -1,4 +1,3 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { ConversationCard } from "./conversation-card";
 import { useChatStore } from "@/hooks/useChatStore";
 import { useEffect } from "react";
@@ -7,10 +6,12 @@ import { ConversationCardSkeleton } from "../skeletons/ConversationCardSkeleton"
 import { Loader } from "lucide-react";
 import { useInView } from "react-intersection-observer";
 import { useShallow } from "zustand/react/shallow";
+import { UnlistedUserCard } from "./unlisted-user-card";
+import { getChatsHeading } from "@/lib/chat.utils";
 
 export function ChatConversationList() {
-  const setChats = useChatStore((state) => state.setChats);
-  const chats = useChatStore(useShallow((state) => state.chats));
+  const { chats, setChats, setUnlistedUsers, unlistedUsers, searchValue } =
+    useChatStore(useShallow((state) => state));
 
   const { data, error, fetchNextPage, hasNextPage, isFetching, isLoading } = useChats();
   const { ref, inView } = useInView({
@@ -18,15 +19,19 @@ export function ChatConversationList() {
     triggerOnce: false, // Allow multiple triggers for pagination
   });
 
-  // Update chats in Zustand store when new data arrives
+  // Update chats and unlisted users in Zustand store when new data arrives
   useEffect(() => {
     if (data) {
       setChats(
         data.pages.flatMap((page) => page.chats),
         data.pages[0].totalCount
       );
+
+      setUnlistedUsers(data.pages.flatMap((page) => page.unlistedUsers));
     }
-  }, [data, setChats]);
+  }, [data, setChats, setUnlistedUsers]);
+
+  
 
   // Fetch next page when the observer comes into view
   useEffect(() => {
@@ -34,11 +39,16 @@ export function ChatConversationList() {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetching, fetchNextPage]);
-
   return (
     <div className="py-3 flex flex-col">
-      <h2 className="px-4 text-sm font-semibold mb-2">Recent Chats</h2>
-      <div className="custom-scrollbar h-[calc(100vh-320px)]   md:h-[calc(100vh-360px)] overflow-y-auto px-2">
+      <h2 className="px-4 text-sm font-semibold mb-2">
+        {isLoading ? (
+          <Loader className="animate-spin text-primary h-4 w-4 m-1" />
+        ) : (
+          getChatsHeading(searchValue, chats, unlistedUsers)
+        )}
+      </h2>
+      <div className="custom-scrollbar h-[calc(100vh-320px)] md:h-[calc(100vh-360px)] overflow-y-auto px-2">
         {/* Loading skeleton */}
         {isLoading &&
           chats?.length === 0 &&
@@ -46,12 +56,12 @@ export function ChatConversationList() {
             <ConversationCardSkeleton key={index} />
           ))}
 
-        {error && !isLoading && chats?.length === 0 && (
+        {error && !isLoading && chats?.length === 0 && unlistedUsers?.length === 0 && (
           <div className="text-red-500 text-center">Something went wrong</div>
         )}
 
         {/* No chats message */}
-        {!isLoading && chats?.length === 0 && (
+        {!isLoading && chats?.length === 0 && unlistedUsers?.length === 0 && (
           <div className="text-center text-muted-foreground py-4 m-1">
             <h3 className="text-primary">No Chats Available</h3>
             <p className="text-sm">You don&apos;t have any conversations yet.</p>
@@ -67,6 +77,14 @@ export function ChatConversationList() {
               </div>
             ))}
         </div>
+
+        {/* Unlisted users list */}
+        {searchValue && unlistedUsers?.length > 0 && (
+          <div className="space-y-2 my-2">
+            {unlistedUsers?.length > 0 &&
+              unlistedUsers.map((user) => <UnlistedUserCard key={user.id} user={user} />)}
+          </div>
+        )}
 
         {/* Infinite Scroll Trigger */}
         {hasNextPage && !isLoading && !isFetching && (

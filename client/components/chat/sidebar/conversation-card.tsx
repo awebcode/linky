@@ -24,7 +24,7 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
 
   const {
     isGroup,
-    groupInfo: { groupId, groupName, groupImage },
+    groupInfo,
     user: { status, name, image },
   } = conversation;
 
@@ -44,8 +44,8 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
           <div className="flex items-center gap-3">
             {isGroup ? (
               <UserAvatar
-                src={groupImage}
-                fallback={groupName}
+                src={groupInfo?.groupImage}
+                fallback={groupInfo?.groupName}
                 isOnline={false} // Groups don't have online status
                 size="md"
               />
@@ -59,11 +59,16 @@ export function ConversationCard({ conversation }: ConversationCardProps) {
             )}
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm truncate">{isGroup ? groupName : name}</h3>
+                <h3 className="font-medium text-sm truncate">
+                  {isGroup ? groupInfo?.groupName : name}
+                </h3>
                 <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(conversation.timestamp as any, {
-                    addSuffix: true,
-                  })}
+                  {formatDistanceToNow(
+                    conversation.lastMessage?.sentAt || conversation.createdAt,
+                    {
+                      addSuffix: true,
+                    }
+                  )}
                 </span>
               </div>
               <div className="flex items-center justify-between max-w-full">

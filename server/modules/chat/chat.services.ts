@@ -64,13 +64,12 @@ const addUserToChat = async (req: Request) => {
 // Get chats - Include admins in the response
 const getChats = async (req: Request) => {
   const userId = req.user.id;
-  const { search = "", cursor, take = 10 } = GetChatsQuerySchema.parse(req.query);
+  const { search = "", cursor, take = 1,nextUnlistedCursor } = GetChatsQuerySchema.parse(req.query);
 
-  // Query the chat members and associated data for pagination
+  // Query the chat members and associated metadata for pagination
   const results = await prisma.chatMember.findMany({
     where: {
       userId, // Ensure the current user is a member of the chat
-      // archivedAt: null, // Exclude archived chats
       chat: search
         ? {
             OR: [
@@ -99,7 +98,7 @@ const getChats = async (req: Request) => {
           createdAt: true,
           name: true,
           image: true,
-          admins: { 
+          admins: {
             select: {
               user: {
                 select: {
@@ -112,14 +111,8 @@ const getChats = async (req: Request) => {
             },
           },
           messages: {
-            take: 10, //1 Only take the latest message 
+            take: 1,
             orderBy: { sentAt: "desc" },
-            select: {
-              id: true,
-              content: true,
-              sentAt: true,
-              senderId: true,
-            },
           },
           members: {
             where: { userId: { not: userId } },
@@ -199,12 +192,52 @@ const getChats = async (req: Request) => {
     };
   });
 
+  // Fetch unlisted users based on the search query
+  const unlistedUsers = search
+    ? await prisma.user.findMany({
+        where: {
+          AND: [
+            {
+              id: {
+                notIn: results
+                  .map((chatMember) =>
+                    chatMember.chat.members.map((member) => member.user.id)
+                  )
+                  .flat(),
+              },
+            }, // Exclude users who are already members of any chat with the current user
+            {
+              OR: [
+                { email: { contains: search, mode: "insensitive" } },
+                { name: { contains: search, mode: "insensitive" } },
+              ],
+            },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          status: true,
+          
+          lastActive: true,
+        },
+        skip: nextUnlistedCursor ? 1 : 0,
+        cursor: nextUnlistedCursor ? { id: nextUnlistedCursor } : undefined,
+        take,
+        orderBy: { name: "asc" },
+      })
+    : [];
+
   // Get total count of chat members for the user
   const totalCount = await getTotalChatMembersCount(userId, search);
+
   return {
     chats: filteredChats,
     nextCursor: results.length > 0 ? results[results.length - 1].id : null,
     totalCount,
+    nextUnlistedCursor: unlistedUsers.length > 0 ? unlistedUsers[unlistedUsers.length - 1].id : null,
+    unlistedUsers, // Add unlisted users in the response
   };
 };
 
@@ -237,45 +270,105 @@ const getTotalChatMembersCount = async (
   return count;
 };
 
-
-const getOnlineUsers = async (userId: string) => {
-  if(!userId) return [];
-  // Fetch online users in all chats where the user is a member
-  const chats = await prisma.chat.findMany({
+// Function to get online users in a chat with cursor-based pagination
+const getOnlineUsersInChat = async (
+  chatId: string,
+  // userId: string,
+  cursor?: string,
+  batchSize: number = 100
+) => {
+  const onlineUsers = await prisma.chatMember.findMany({
     where: {
-      members: {
-        some: {
-          userId: userId, // Ensure this is the user's chat
+      chatId: chatId,
+      user: {
+        status: Status.ONLINE,
+      },
+      // userId: { not: userId }, // Exclude the current user from the online users
+    },
+
+    select: {
+      id: true,
+      user: {
+        select: {
+          id: true,
         },
       },
+    },
+    take: batchSize, // Limit the number of online users
+    cursor: cursor ? { id: cursor } : undefined, // Use cursor if provided
+    skip: cursor ? 1 : 0, // Skip the cursor itself if provided
+  });
+
+  const nextCursor =
+    onlineUsers.length === batchSize ? onlineUsers[onlineUsers.length - 1].id : null;
+  return {
+    onlineUsers,
+    nextCursor,
+  };
+};
+
+const getOnlineUsersInUserChats = async (
+  userId: string,
+  cursor?: string,
+  batchSize: number = 100
+) => {
+  // Fetch the list of chats where the user is a member
+  const chatMembers = await prisma.chatMember.findMany({
+    where: {
+      chat: {
+        isGroup: false, // Filter for non-group chats
+      },
+      userId: userId, // Fetch chats where the user is a member
+    },
+    select: {
+      chatId: true, // Get the chatId for each chat the user is a member of
+    },
+    take: batchSize, // Paginate the chats for the user
+    cursor: cursor ? { id: cursor } : undefined, // Use cursor for pagination
+  });
+
+  // Extract chatIds from the chats where the user is a member
+  const chatIds = chatMembers.map((member) => member.chatId);
+
+  // Fetch all online users in these chats (excluding the current user)
+  const onlineUsers = await prisma.chatMember.findMany({
+    where: {
+      chatId: { in: chatIds }, // Filter by the chats the user is a member of
+      user: {
+        status: Status.ONLINE, // Filter for online users
+      },
+      // userId: { not: userId }, // Exclude the current user from the online users
     },
     select: {
       id: true,
-      members: {
-        where: {
-          userId: { not: userId }, // Exclude the current user
-          user: { status: Status.ONLINE }, // Filter for online users
-        },
+      user: {
         select: {
-          user: {
-            select: {
-              id: true,
-              name: true,
-              image: true,
-              status: true,
-            },
-          },
+          id: true,
         },
       },
     },
+    take: batchSize, // Limit the number of online users per chat
+    cursor: cursor ? { id: cursor } : undefined, // Use cursor for pagination
   });
 
-  // Flatten the result to get all online users across chats
-  return chats.flatMap((chat) => chat.members.map((member) => member.user));
-}
+  // Prepare nextCursor for pagination
+  const nextCursor =
+    onlineUsers.length === batchSize ? onlineUsers[onlineUsers.length - 1].id : null;
+
+  return { onlineUsers, nextCursor };
+};
+
 // Delete all chats - no change
 const deleteAllChats = async (req: Request) => {
   return await prisma.chat.deleteMany();
 };
 
-export { createChat, addUserToChat, getChats, deleteAllChats, getOnlineUsers };
+export {
+  createChat,
+  addUserToChat,
+  getChats,
+  deleteAllChats,
+  getOnlineUsersInChat,
+  getOnlineUsersInUserChats,
+  getTotalChatMembersCount,
+};

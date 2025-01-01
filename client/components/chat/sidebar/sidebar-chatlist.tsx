@@ -5,22 +5,28 @@ import { ChatConversationList } from "./chat-conversation-list";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useShallow } from "zustand/react/shallow";
 import { useChatStore } from "@/hooks/useChatStore";
+import { getChatsCount } from "@/lib/chat.utils";
 
 const SidebarChatList = () => {
   const { activeTab, setActiveTab } = useTabStore();
-  const totalCount = useChatStore(useShallow((state) => state.totalCount));
+  const {searchValue, unlistedUsers, chats} = useChatStore(useShallow((state) => state));
 // Define the SIDEBAR_TABS array with explicit `as const`
  const SIDEBAR_TABS = [
-   { id: "all", label: "All", count:totalCount, badgeColor: "bg-blue-100 text-blue-600" },
-  { id: "unread", label: "Unread", count: 5, badgeColor: "bg-red-100 text-red-600" },
-  {
-    id: "favorite",
-    label: "Favorite",
-    count: 8,
-    badgeColor: "bg-yellow-100 text-yellow-600",
-  },
-  { id: "groups", label: "Groups", count: 3, badgeColor: "bg-green-100 text-green-600" },
-] 
+   {
+     id: "all",
+     label: "All",
+     count: getChatsCount(searchValue, chats, unlistedUsers),
+     badgeColor: "bg-blue-100 text-blue-600",
+   },
+   { id: "unread", label: "Unread", count: 5, badgeColor: "bg-red-100 text-red-600" },
+   {
+     id: "favorite",
+     label: "Favorite",
+     count: 8,
+     badgeColor: "bg-yellow-100 text-yellow-600",
+   },
+   { id: "groups", label: "Groups", count: 3, badgeColor: "bg-green-100 text-green-600" },
+ ]; 
 
   return (
     <div>

@@ -1,78 +1,100 @@
 import { Server, Socket } from "socket.io";
 import http from "http";
 import { Status } from "@prisma/client";
-import { handleUserStatusCleanup } from "./socket.utils";
-import * as chatService from "../chat/chat.services";
+
 import { loggerInstance } from "../../config/logger.config";
 import { pubClient, subClient } from "../../config/redis.config";
-import { getUserStatus, setUserStatus } from "./redis.services";
 import { createAdapter } from "@socket.io/redis-adapter";
 import prisma from "../../libs/prisma";
-
+import { isOnlineR, removeUserOnline, setUserOnline } from "./redis.services";
+import { sentStatusChanged } from "./conn.socket.services";
+import { disconnect } from "process";
 let io: Server;
-const initSocket = (server: http.Server) => {
 
+/**
+ * Initialize the Socket.io server with Redis adapter and necessary event listeners.
+ * @param {http.Server} server - The HTTP server to attach the WebSocket server to.
+ */
+const initSocket = (server: http.Server) => {
   io = new Server(server, {
     cors: {
       origin: "*",
       methods: ["GET", "POST"],
     },
     adapter: createAdapter(pubClient, subClient),
-    
+    perMessageDeflate: {
+      threshold: 1024, // Only compress messages larger than 1 KB
+    },
+    allowEIO3: true, // Enable support for EIO 3
+    transports: ["websocket", "polling", "webtransport"],
   });
 
   io.on("connection", (socket: Socket) => {
     console.log("New socket connection", socket.id);
+    const userId = socket.handshake.query.userId as string;
 
-    // Handle user heartbeat
-    socket.on("online", async ({ userId }) => {
-      socket.data.userId = userId;
-      if(!userId) return
-      // Check if the user is online and update last active timestamp
-      const userStatus = await getUserStatus(userId)
-      if (!userStatus || userStatus.status === Status.OFFLINE) {
-        // User is going online, set status to ONLINE in Redis
-        await setUserStatus(userId, Status.ONLINE, Date.now());
-        await prisma.user.update({
-          where: { id: userId },
-          data: { status: Status.ONLINE },
-        });
-        const onlineUsers = await chatService.getOnlineUsers(userId);
-        // Broadcast to other users that this user is now online
-        onlineUsers.forEach((user) => {
-          io.to(user.id).emit("user_status_change", { userId, status: Status.ONLINE });
-        });
-      } else {
-        // Update the last active timestamp for the online user
-        await setUserStatus(userId, Status.ONLINE, Date.now());
+    // Handle user heartbeat to keep the socket active
+    socket.on("heartbeat", async () => {
+      if (userId) {
+        try {
+          // Update the user's online status in Redis
+          await setUserOnline(userId);
+          console.log(`User ${userId} heartbeat received and updated.`);
+        } catch (error) {
+          loggerInstance.error(`Error updating heartbeat for user ${userId}`, error);
+        }
       }
     });
 
-    // Handle user disconnection and update their status to OFFLINE
-    socket.on("disconnect", async () => {
+    // Handle user going online
+    socket.on("user-online", async ({ userId }: { userId: string }) => {
+      if (!userId) {
+        loggerInstance.warn("User ID not provided for online event");
+        return;
+      }
+
       try {
-        const userId = socket.data.userId;
-        console.log({ disUserId: userId });
-
-        // Check if user was already marked as online
-        const userStatus = await getUserStatus(userId)
-
-        if (userStatus && userStatus.status === Status.ONLINE) {
-          // Mark the user as offline in Redis
-          await setUserStatus(userId, Status.OFFLINE, Date.now());
-
-          // Broadcast to others that this user is now offline
-          io.emit("user_status_change", { userId, status: Status.OFFLINE });
+        // Check if the user is already online
+        const isOnline = await isOnlineR(userId);
+        if (!isOnline) {
+          // User is going online for the first time, store user-to-socket mapping
+          await setUserOnline(userId);
+          await prisma.user.update({
+            where: { id: userId },
+            data: { status: Status.ONLINE },
+          });
+          // Notify other users about the user's online status
+          await sentStatusChanged(userId, Status.ONLINE);
         }
       } catch (error) {
-        loggerInstance.error("Error during disconnection", error);
+        loggerInstance.error(`Error handling online event for user ${userId}`, error);
+      }
+    });
+
+    // Handle user disconnection
+    socket.on("disconnect", async () => {
+      if (!userId) {
+        loggerInstance.warn("User ID not provided for disconnect event");
+        return;
+      }
+
+      try {
+        // Remove user-to-socket mapping from Redis and update database status to offline
+        await removeUserOnline(userId);
+        await prisma.user.update({
+          where: { id: userId },
+          data: { status: Status.OFFLINE },
+        });
+
+        // Notify other users about the user's offline status
+        io.emit("user_status_changed", { userId, status: Status.OFFLINE });
+
+        console.log(`User ${userId} disconnected and status updated.`);
+      } catch (error) {
+        loggerInstance.error(`Error handling disconnect for user ${userId}`, error);
       }
     });
   });
-
-  // Start user status cleanup to remove inactive users from Redis
-  handleUserStatusCleanup(10000, io);
-
 };
 
-export { initSocket,io };
+export { initSocket, io };
