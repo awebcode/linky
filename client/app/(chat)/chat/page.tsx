@@ -1,36 +1,45 @@
 "use client";
-import { ChatHeader } from "@/components/chat/chat-header";
-import { ChatInput } from "@/components/chat/chat-input";
-import { ChatMessages } from "@/components/chat/chat-messages";
+import TypingIndicator from "@/components/chat/indicators/message-typing-indicator";
+import dynamic from "next/dynamic";
 
-// This would typically come from your database
-const messages = [
+// Dynamically import the components with ssr: false
+const ChatHeader = dynamic(
+  () => import("@/components/chat/chat-header").then((mod) => mod.ChatHeader),
   {
-    id: 1,
-    content: "Hey! How's it going?",
-    timestamp: new Date(Date.now() - 3600000),
-    isOwn: false,
-    userName: "Sarah Wilson",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-  },
+    ssr: false,
+  }
+);
+const ChatMessages = dynamic(
+  () => import("@/components/chat/chat-messages").then((mod) => mod.ChatMessages),
   {
-    id: 2,
-    content: "Hi Sarah! I'm doing great, thanks for asking. How about you?",
-    timestamp: new Date(Date.now() - 3000000),
-    isOwn: true,
-    userName: "You",
-    avatar:
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-  },
-];
+    ssr: false,
+  }
+);
+const ChatInput = dynamic(
+  () => import("@/components/chat/chat-input").then((mod) => mod.ChatInput),
+  {
+    ssr: false,
+  }
+);
 
 export default function ChatPage() {
   return (
-    <div className="flex flex-col h-full ">
-      <ChatHeader />
-      <ChatMessages messages={messages} />
-      <ChatInput onSendMessage={console.log} />
+    <div className="flex flex-col h-screen w-full p-2">
+      <div className="flex-none">
+        <ChatHeader />
+      </div>
+      <div className="flex-grow">
+        {" "}
+        {/* Overflow-auto */}
+        {/* Chat messages */}
+        <ChatMessages />
+        {/* Typing indicator */}
+      </div>
+      <div className="flex-none">
+        <TypingIndicator />
+
+        <ChatInput />
+      </div>
     </div>
   );
 }

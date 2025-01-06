@@ -3,8 +3,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Loader from "@/components/common/Loader";
-import Register from "@/modules/auth/register";
-import Login from "@/modules/auth/login";
+import Register from "@/app/(auth)/modules/register";
+import Login from "@/app/(auth)/modules/login";
 
 const HomePage = () => {
   const searchParams = useSearchParams();

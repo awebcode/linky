@@ -8,6 +8,9 @@ import IconButton from "../common/IconButton";
 import { useState } from "react";
 import ChatInfoSheet from "./rightside/chat-info-sheet";
 import { CallDialog } from "./dialog/call-dialog";
+import { useMessageStore } from "@/hooks/useMessageStorage";
+import CardTypingIndicator from "./indicators/card-typing-indicator";
+import { useTypingStore } from "@/hooks/useTypingStore";
 
 interface ChatHeaderProps {
   className?: string;
@@ -15,6 +18,8 @@ interface ChatHeaderProps {
 
 export function ChatHeader({}: ChatHeaderProps) {
   const selectedChat = useChatStore(useShallow((state) => state.selectedChat));
+  const { typingUsers } = useTypingStore(useShallow((state) => state));
+  const { totalMessagesCount } = useMessageStore(useShallow((state) => state));
   const setSelectedChat = useChatStore((state) => state.setSelectedChat);
   const [isRightSheetOpen, setRightSheetOpen] = useState(false); // Track sheet state
    const [isCallDialogOpen, setIsCallDialogOpen] = useState(false);
@@ -58,33 +63,44 @@ export function ChatHeader({}: ChatHeaderProps) {
         )}
         <div>
           <h2 className="font-semibold">{isGroup ? groupInfo?.groupName : name}</h2>
-          <p className="text-sm text-muted-foreground">
-            {isGroup ? `${selectedChat.membersCount} members` : status}
-          </p>
+          <p className="text-sm text-muted-foreground"></p>
+          {typingUsers.filter((user) => user.chatId === selectedChat?.chatId).length >
+          0 ? (
+            <CardTypingIndicator />
+          ) : isGroup ? (
+            `${selectedChat.membersCount} members`
+          ) : (
+            status
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-4">
-        <IconButton onClick={handleAudioCall}>
-          <Phone className="w-5 h-5" />
-        </IconButton>
-        <IconButton onClick={handleVideoCall}>
-          <Video className="w-5 h-5" />
-        </IconButton>
-        {/* Call Dialog */}
-        <CallDialog
-          isOpen={isCallDialogOpen}
-          onClose={() => setIsCallDialogOpen(false)}
-          callType={callType}
-        />
-        <IconButton onClick={() => setRightSheetOpen(true)}>
-          <Info className="w-5 h-5" />
-        </IconButton>
-        {isRightSheetOpen && (
-          <ChatInfoSheet
-            isOpen={isRightSheetOpen}
-            onClose={() => setRightSheetOpen(false)}
+      <div className="flex flex-col items-center">
+        <div className="flex">
+          <IconButton onClick={handleAudioCall}>
+            <Phone className="w-5 h-5" />
+          </IconButton>
+          <IconButton onClick={handleVideoCall}>
+            <Video className="w-5 h-5" />
+          </IconButton>
+          {/* Call Dialog */}
+          <CallDialog
+            isOpen={isCallDialogOpen}
+            onClose={() => setIsCallDialogOpen(false)}
+            callType={callType}
           />
-        )}
+          <IconButton onClick={() => setRightSheetOpen(true)}>
+            <Info className="w-5 h-5" />
+          </IconButton>
+          {isRightSheetOpen && (
+            <ChatInfoSheet
+              isOpen={isRightSheetOpen}
+              onClose={() => setRightSheetOpen(false)}
+            />
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground">
+          Messages: {totalMessagesCount[selectedChat!.chatId]}
+        </span>
 
         {/* <UserActionDropdown
           trigger={

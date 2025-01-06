@@ -1,33 +1,55 @@
-import type { Status } from "@prisma/client";
-import prisma from "../../libs/prisma";
-import { fetchBatchAllOnlineUsersInUserChat } from "../chat/chat.utils";
-import { io } from "./handle.socket";
 import { AppError } from "../../middlewares/errors-handle.middleware";
+import { fetchBatchAllOnlineConversationsByChatId, fetchBatchAllOnlineConversationsByUserId } from "../chat/chat.utils";
 // import { getRoomMembersR } from "./redis.services";
 
-export const sentStatusChanged = async (userId: string, status: Status) => {
-  try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { name: true, image: true, lastActive: true },
+/**
+ * @title  Get online conversations ids only in your chat by userId
+ * @param userId 
+ * @returns Array of conversationIds
+ */
+export const getOnlineConversationIdsByUserId = async (userId: string) => {
+  try { 
+    const onlineConversations = await fetchBatchAllOnlineConversationsByUserId(userId, 250); // Fetch in larger batches if possible
+    const onlineConversationsIds = onlineConversations.map((chatId) => {
+      return chatId;
     });
-    if (!user) return;
-    // const roomMembers=await getRoomMembersR(userId)
-    // Fetch all online users
-    const onlineUsers = await fetchBatchAllOnlineUsersInUserChat(userId, 250); // Fetch in larger batches if possible
-
-    // Map through online users to get their socket IDs
-    const onlineUsersIds = onlineUsers.map((user) => {
-      return user.id;
-    });
-
-    // Emit "user_status_changed" event to all relevant sockets
-    io.to(onlineUsersIds).emit("user_status_changed", {
-      ...user,
-      id: userId, // Assuming the status change is for the current user
-      status,
-    });
+    return onlineConversationsIds;
   } catch (error) {
-    throw new AppError("Error sending status change", 500);
+    throw new AppError("Error fetching online users", 500);
   }
-};
+}
+
+/**
+ * @title   Get online users/Friends ids only in your chat by userId 
+ * @param userId 
+ * @returns Array of userIds
+ */
+// export const getOnlineUsersIdsByUserId = async (userId: string) => {
+//   try { 
+//     const onlineUsers = await fetchBatchAllOnlineConversationsByUserId(userId, 250); // Fetch in larger batches if possible
+//     const onlineUsersIds = onlineUsers.map((user) => {
+//       return user.user.id;
+//     });
+//     return onlineUsersIds;
+//   } catch (error) {
+//     throw new AppError("Error fetching online users", 500);
+//   }
+// }
+/**
+ * @title Get online users/Friends ids only in your chat by chatId
+ * 
+ * @param chatId 
+ * @returns  Array of UserIds
+ */
+// export const getOnlineUsersIDsByChatId = async (chatId: string) => {
+//   try { 
+//     const onlineUsers = await fetchBatchAllOnlineConversationsByChatId(chatId, 250); // Fetch in larger batches if possible
+//     const onlineUsersIds = onlineUsers.map((user) => {
+//       return user.user.id;
+//     });
+//     return onlineUsersIds;
+//   } catch (error) {
+//     throw new AppError("Error fetching online users", 500);
+//   }
+  
+// }

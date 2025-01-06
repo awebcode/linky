@@ -16,3 +16,7 @@ export interface UnlistedUser {
   status: Status;
   lastActive: Date;
 }
+
+export interface TypingUser extends UnlistedUser {
+  chatId: string;
+}

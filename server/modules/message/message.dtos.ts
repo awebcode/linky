@@ -1,17 +1,21 @@
+import { Status } from "@prisma/client";
 import { z } from "zod";
 
 // Schema for creating a new message
 export const CreateMessageSchema = z.object({
   content: z.string().min(1, "Message content cannot be empty"),
-  senderId: z.string().uuid("Invalid sender ID format"),
-  chatId: z.string().uuid("Invalid chat ID format"),
+  senderId: z.string(),
+  chatId: z.string(),
 });
+
+
+
 
 // Schema for fetching messages by chatId
 export const GetMessagesSchema = z.object({
-  chatId: z.string().uuid("Invalid chat ID format"),
+  chatId: z.string(),
   cursor: z.string().optional(), // Optional string for cursor (for pagination)
-  limit: z
+  take: z
     .string() // Accept `take` as a string
     .optional()
     .refine((value) => value === undefined || !isNaN(Number(value)), {

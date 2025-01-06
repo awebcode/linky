@@ -1,30 +1,24 @@
-import { useEffect, useState } from "react";
-import { useSocket } from "./use-socket";
-import { useUser } from "./use-user";
+import { useState, useEffect } from "react";
 
-export const useIsOnline = () => {
-  const socket = useSocket();
-  const { user } = useUser();
-
+export function useIsOnline() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   useEffect(() => {
-    if (!user) return;
-    socket.emit("user_online", { userId: user?.id });
-    setIsOnline(true);
+    const updateOnlineStatus = () => setIsOnline(navigator.onLine);
 
-    const handleUnload = () => {
-      // socket.emit("user_offline", { userId });
-      socket.emit("user_offline", { userId: user?.id });
-      setIsOnline(false);
-    };
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
 
-    window.addEventListener("beforeunload", handleUnload);
+    // Fallback: Polling method
+    const interval = setInterval(updateOnlineStatus, 3000); // Check every 3 seconds
 
     return () => {
-      socket.off("heartbeat");
-      window.removeEventListener("beforeunload", handleUnload);
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+      clearInterval(interval);
     };
-  }, [socket, user]);
+  }, []);
 
   return isOnline;
-};
+}
+

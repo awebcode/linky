@@ -1,4 +1,4 @@
-import ResetPassword from "@/modules/auth/reset-password";
+import ResetPassword from "@/app/(auth)/modules/reset-password";
 import { notFound } from "next/navigation";
 import React from "react";
 

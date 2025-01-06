@@ -29,20 +29,25 @@ model ChatAdmin {
 }
 
 model ChatMember {
-  id         String    @id @default(auto()) @map("_id") @db.ObjectId
-  userId     String    @db.ObjectId  
-  chatId     String    @db.ObjectId
-  joinedAt   DateTime  @default(now())
-  archivedAt DateTime? // Timestamp when the chat was archived
-  pinnedAt   DateTime? // Timestamp when the chat was pinned
-  deletedAt  DateTime? // Timestamp when the chat was deleted
-  deletedBy  String?   @db.ObjectId // UserId of who deleted the chat
-
+  id                 String              @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String              @db.ObjectId
+  chatId             String              @db.ObjectId
+  joinedAt           DateTime            @default(now())
+  archivedAt         DateTime? // Timestamp when the chat was archived
+  pinnedAt           DateTime? // Timestamp when the chat was pinned
+  favoriteAt         DateTime? // Timestamp when the chat was favorited
+  lastSeenAt         DateTime? // Timestamp when the user last saw the chat
+  deletedAt          DateTime? // Timestamp when the chat was deleted
+  deletedBy          String?             @db.ObjectId // UserId of who deleted the chat
+  updatedAt          DateTime?           @updatedAt
   notificationStatus NotificationStatus? @relation(fields: [userId, chatId], references: [userId, chatId], onDelete: Cascade)
   user               User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   chat               Chat                @relation(fields: [chatId], references: [id], onDelete: Cascade)
 
   @@unique([userId, chatId]) // Ensures a user can't join the same chat twice
+  @@index([chatId])
+  @@index([userId])
+  @@index([updatedAt])
 }
 
 model NotificationStatus {

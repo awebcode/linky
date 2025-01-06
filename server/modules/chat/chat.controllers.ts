@@ -1,6 +1,7 @@
 // controllers/chat.controllers.ts
 import type { RequestHandler } from "express";
 import * as chatService from "./chat.services";
+import { getTotalChatCounts } from "./chat.utils";
 
 const createChat: RequestHandler = async (req, res, next) => {
   try {
@@ -29,10 +30,19 @@ const getChats: RequestHandler = async (req, res, next) => {
   }
 };
 
-const getOnlineUsers: RequestHandler = async (req, res, next) => {
+const getChatsCount: RequestHandler = async (req, res, next) => {
   try {
-    const onlineUsers = await chatService.getOnlineUsers(req.user.id);
-    res.status(200).json(onlineUsers);
+    const count = await getTotalChatCounts(req.user.id);
+    res.status(200).json(count);
+  } catch (err) {
+    next(err);
+  }
+}
+
+const getOnlineConversations: RequestHandler = async (req, res, next) => {
+  try {
+    const onlineChatMembers = await chatService.getOnlineConversationsForClient(req);
+    res.status(200).json(onlineChatMembers);
   } catch (err) {
     next(err);
   }
@@ -47,4 +57,4 @@ const deleteAllChats: RequestHandler = async (req, res, next) => {
   }
 };
 
-export { createChat, addUserToChat, getChats,getOnlineUsers, deleteAllChats };
+export { createChat, addUserToChat, getChats,getOnlineConversations, deleteAllChats, getChatsCount };

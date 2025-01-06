@@ -6,28 +6,70 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { useShallow } from "zustand/react/shallow";
 import { useChatStore } from "@/hooks/useChatStore";
 import { getChatsCount } from "@/lib/chat.utils";
+import { useCountStore } from "@/hooks/countStore";
 
 const SidebarChatList = () => {
-  const { activeTab, setActiveTab } = useTabStore();
-  const {searchValue, unlistedUsers, chats} = useChatStore(useShallow((state) => state));
-// Define the SIDEBAR_TABS array with explicit `as const`
+  const { activeTab, setActiveTab } = useTabStore((state) => state);
+  const {searchValue, getDisplayedChats,getDisplayedUnlistedUsers} = useChatStore(useShallow((state) => state));
+  const {chatsCount}=useCountStore(useShallow((state) => state));
+  const displayedChats = getDisplayedChats(activeTab);
+  const displayedUnlistedUsers = getDisplayedUnlistedUsers();
+  const {chats}=useChatStore(useShallow((state) => state));
+  // Define the SIDEBAR_TABS array with explicit `as const`
+  const count=getChatsCount(searchValue, displayedChats, displayedUnlistedUsers)
  const SIDEBAR_TABS = [
    {
      id: "all",
      label: "All",
-     count: getChatsCount(searchValue, chats, unlistedUsers),
+     count: chatsCount.totalChatsCount,
      badgeColor: "bg-blue-100 text-blue-600",
    },
-   { id: "unread", label: "Unread", count: 5, badgeColor: "bg-red-100 text-red-600" },
+   {
+     id: "groups",
+     label: "Groups",
+     count: chatsCount.groupChatsCount,
+     badgeColor: "bg-green-100 text-green-600",
+   },
+   {
+     id: "unread",
+     label: "Unread",
+     count: chatsCount.unreadChatsCount>0?chatsCount.unreadChatsCount:chats["unread"]?.length||0,
+     badgeColor: "bg-red-100 text-red-600",
+   },
    {
      id: "favorite",
      label: "Favorite",
-     count: 8,
+     count:
+       chatsCount.favoriteChatsCount===0 ? chats["favorite"]?.length||0 : 0,
      badgeColor: "bg-yellow-100 text-yellow-600",
    },
-   { id: "groups", label: "Groups", count: 3, badgeColor: "bg-green-100 text-green-600" },
- ]; 
+   {
+     id: "pinned",
+     label: "Pinned",
+     count: chatsCount.pinnedChatsCount===0 ? chats["pinned"]?.length : 0,
+     badgeColor: "bg-blue-100 text-blue-600",
+   },
+   {
+     id: "Muted",
+     label: "Muted",
+     count: chatsCount.mutedChatsCount===0 ? chats["muted"]?.length : 0,
+     badgeColor: "bg-gray-100 text-gray-600",
+   },
 
+   {
+     id: "Archived",
+     label: "Archived",
+     count: chatsCount.archivedChatsCount===0 ? chats["archived"]?.length : 0,
+     badgeColor: "bg-violet-100 text-violet-600",
+   },
+   {
+     id: "Blocked",
+     label: "Blocked",
+     count: chatsCount.blockedChatsCount===0 ? chats["blocked"]?.length : 0,
+     badgeColor: "bg-red-100 text-red-600",
+   },
+ ]; 
+console.log({chats})
   return (
     <div>
       {/* Tab List */}
@@ -44,9 +86,7 @@ const SidebarChatList = () => {
               }`}
             >
               {tab.label}
-              <Badge
-                className={`ml-1   text-xs py-0.5 px-1.5 ${tab.badgeColor} `}
-              >
+              <Badge className={`ml-1   text-xs py-0.5 px-1.5 ${tab.badgeColor} `}>
                 {tab.count}
               </Badge>
             </button>
@@ -56,22 +96,11 @@ const SidebarChatList = () => {
       </ScrollArea>
 
       {/* Tab Content */}
-      {activeTab === "all" && <ChatConversationList />}
-      {activeTab === "unread" && (
-        <div className="text-gray-700 dark:text-gray-200">
-          Unread chats will be displayed here.
-        </div>
-      )}
-      {activeTab === "favorite" && (
-        <div className="text-gray-700 dark:text-gray-200">
-          Favorite chats will be displayed here.
-        </div>
-      )}
-      {activeTab === "groups" && (
-        <div className="text-gray-700 dark:text-gray-200">
-          Groups will be displayed here.
-        </div>
-      )}
+      <ChatConversationList />
+      {/* {activeTab === "all" && <ChatConversationList />}
+      {activeTab === "unread" && <ChatConversationList />}
+      {activeTab === "favorite" && <ChatConversationList />}
+      {activeTab === "groups" && <ChatConversationList />} */}
     </div>
   );
 };

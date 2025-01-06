@@ -1,9 +1,11 @@
 model Message {
   id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  tempId      String?        
   content     String
   senderId    String        @db.ObjectId
   chatId      String        @db.ObjectId
   sentAt      DateTime      @default(now())
+  updatedAt   DateTime?     @updatedAt
   status      MessageStatus @default(SENT)
   sender      User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
   chat        Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)

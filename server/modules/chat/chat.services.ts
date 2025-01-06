@@ -2,16 +2,20 @@
 
 import type { Request } from "express";
 import prisma from "../../libs/prisma";
-import { AddUserToChatSchema, CreateChatSchema, GetChatsQuerySchema } from "./chat.dtos";
+import {
+  AddUserToChatSchema,
+  CreateChatSchema,
+  GetChatsQuerySchema,
+  GetOnlineConversationsSchema,
+} from "./chat.dtos";
 import { AppError } from "../../middlewares/errors-handle.middleware";
-import { formatChat, generateRandomAvatar } from "./chat.utils";
+import { formatChat, generateRandomAvatar, getTotalChatMembersCount } from "./chat.utils";
 import { uploadSingleFile } from "../../config/cloudinary.config";
 import { Status } from "@prisma/client";
 
 // Create Chat - Updated to support multiple admins
 const createChat = async (req: Request) => {
   const { members, isGroupChat = false, name } = CreateChatSchema.parse(req.body);
-
   // Ensure the chat has valid member count based on its type
   if ((!isGroupChat && members.length > 1) || (isGroupChat && members.length < 2)) {
     throw new AppError(
@@ -32,12 +36,10 @@ const createChat = async (req: Request) => {
   ];
 
   // Determine chat image (either uploaded or random)
-  const image = req.file
-    ? await uploadSingleFile(req)
-    : generateRandomAvatar(isGroupChat ? name : undefined);
+  const image = req.file ? await uploadSingleFile(req) : generateRandomAvatar(name);
 
   // Create the chat in the database
-  return prisma.chat.create({
+  const createdChat = await prisma.chat.create({
     data: {
       name,
       admins: { createMany: { data: allAdmins.map((id) => ({ userId: id })) } }, // Save multiple admins
@@ -48,6 +50,12 @@ const createChat = async (req: Request) => {
       },
     },
   });
+  /**
+   * Join the socket room for the newly created chat
+   */
+  // io.socketsJoin(createdChat.id);
+
+  return;
 };
 
 // Add User to Chat - No change needed for this
@@ -61,34 +69,49 @@ const addUserToChat = async (req: Request) => {
   });
 };
 
-// Get chats - Include admins in the response
 const getChats = async (req: Request) => {
   const userId = req.user.id;
-  const { search = "", cursor, take = 1,nextUnlistedCursor } = GetChatsQuerySchema.parse(req.query);
+  const {
+    search = "",
+    cursor,
+    take = 10,
+    nextUnlistedCursor,
+    filter,
+    chatIds,
+  } = GetChatsQuerySchema.parse(req.query);
 
   // Query the chat members and associated metadata for pagination
   const results = await prisma.chatMember.findMany({
     where: {
-      userId, // Ensure the current user is a member of the chat
-      chat: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              {
-                members: {
-                  some: {
-                    user: {
-                      email: {
-                        contains: search,
-                        mode: "insensitive",
-                      },
+      userId,
+      // Ensure the current user is a member of the chat
+      // Filter based on favoriteAt and unread chats (filtering for favorite chats or unread chats)
+      favoriteAt: filter === "favorite" ? { not: null } : undefined,
+      lastSeenAt: filter === "unread" ? { not: null } : undefined,
+      chat: {
+        id: { in: chatIds },
+        // Search logic for chat name or member email
+        ...(search && {
+          OR: [
+            { name: { contains: search, mode: "insensitive" } },
+            {
+              members: {
+                some: {
+                  user: {
+                    email: {
+                      contains: search,
+                      mode: "insensitive",
                     },
                   },
                 },
               },
-            ],
-          }
-        : undefined,
+            },
+          ],
+        }),
+
+        // Apply group filtering if the filter is not "all"
+        isGroup: filter && filter !== "all" ? filter === "groups" : undefined,
+      },
     },
     include: {
       chat: {
@@ -111,11 +134,27 @@ const getChats = async (req: Request) => {
             },
           },
           messages: {
-            take: 1,
+            take: 1, // Only take the most recent message
             orderBy: { sentAt: "desc" },
+            select: {
+              id: true,
+              content: true,
+              updatedAt: true,
+              sentAt: true,
+              status: true,
+              sender: {
+                select: {
+                  id: true,
+                  name: true,
+                  image: true,
+                  // status: true,
+                },
+              },
+              // media: { take: 5, select: { id: true, type: true, url: true } },
+            },
           },
           members: {
-            where: { userId: { not: userId } },
+            where: { userId: { not: userId } }, // Exclude current user from members
             select: {
               user: {
                 select: {
@@ -126,7 +165,7 @@ const getChats = async (req: Request) => {
                 },
               },
             },
-            take: 1, // Limit to 1 member for non-current user
+            take: 1, // Limit to 1 member for non-current user (the first member for the chat)
           },
           NotificationStatus: {
             where: { userId },
@@ -136,7 +175,7 @@ const getChats = async (req: Request) => {
             },
           },
           blockedUsers: {
-            where: { userId, blockedUntil: { gte: new Date() } },
+            where: { userId, blockedUntil: { gte: new Date() } }, // Only include blocked users whose block is active
             select: {
               id: true,
               userId: true,
@@ -160,14 +199,42 @@ const getChats = async (req: Request) => {
         },
       },
     },
-    take,
-    skip: cursor ? take : 0, // Skip the first page if cursor exists
+
+    take, // Number of records per page (pagination)
+    skip: cursor ? 1 : 0, // Skip based on the cursor
     cursor: cursor ? { id: cursor } : undefined, // Pagination cursor
     orderBy: [
-      { pinnedAt: "desc" }, // Sort pinned chats first
-      { id: "asc" }, // Default sort by ID
+      { updatedAt: "desc" },
+      // { pinnedAt: "desc" }, // Sort pinned chats first
+      // { id: "asc" }, // Default sort by chat ID **desc for get new created chat first
     ],
   });
+  const nextCursor = results.length === take ? results[results.length - 1].id : null;
+  // results.sort((a, b) => {
+  //   // Get the latest message updatedAt date or default to a very old date
+  //   const aUpdatedAt = a.chat.messages[0]?.updatedAt ?? new Date(0);
+  //   const bUpdatedAt = b.chat.messages[0]?.updatedAt ?? new Date(0);
+
+  //   // Get the chat createdAt date
+  //   const aCreatedAt = a.chat.createdAt;
+  //   const bCreatedAt = b.chat.createdAt;
+
+  //   // Define sorting priority:
+  //   // 1. Newer messages (by updatedAt)
+  //   // 2. Newly created chats (no messages)
+  //   // 3. Older chats/messages (by createdAt)
+
+  //   if (a.chat.messages.length > 0 && b.chat.messages.length > 0) {
+  //     // Both chats have messages -> Sort by updatedAt (newest first)
+  //     return bUpdatedAt.getTime() - aUpdatedAt.getTime();
+  //   } else if (a.chat.messages.length === 0 && b.chat.messages.length === 0) {
+  //     // Neither chat has messages -> Sort by createdAt (newest first)
+  //     return bCreatedAt.getTime() - aCreatedAt.getTime();
+  //   } else {
+  //     // One chat has messages and the other doesn't -> Prioritize chats with messages
+  //     return b.chat.messages.length - a.chat.messages.length;
+  //   }
+  // });
 
   // Map through results and structure response data
   const filteredChats = results.map((chatMember) => {
@@ -189,6 +256,8 @@ const getChats = async (req: Request) => {
         : null,
       archivedAt: chatMember.archivedAt, // Add archivedAt to response
       pinnedAt: chatMember.pinnedAt, // Add pinnedAt to response
+      favoriteAt: chatMember.favoriteAt, // Add favoriteAt to response
+      lastSeenAt: chatMember.lastSeenAt, // Add lastSeenAt to response
     };
   });
 
@@ -219,59 +288,30 @@ const getChats = async (req: Request) => {
           name: true,
           image: true,
           status: true,
-          
+
           lastActive: true,
         },
+        take,
+
         skip: nextUnlistedCursor ? 1 : 0,
         cursor: nextUnlistedCursor ? { id: nextUnlistedCursor } : undefined,
-        take,
         orderBy: { name: "asc" },
       })
     : [];
 
-  // Get total count of chat members for the user
-  const totalCount = await getTotalChatMembersCount(userId, search);
-
   return {
     chats: filteredChats,
-    nextCursor: results.length > 0 ? results[results.length - 1].id : null,
-    totalCount,
-    nextUnlistedCursor: unlistedUsers.length > 0 ? unlistedUsers[unlistedUsers.length - 1].id : null,
+    nextCursor,
+    // totalChatMembersCount,
+    nextUnlistedCursor:
+      unlistedUsers.length === take ? unlistedUsers[unlistedUsers.length - 1].id : null,
     unlistedUsers, // Add unlisted users in the response
+    // chatCounts
   };
 };
 
-// Service to count the total number of chat members for a user
-const getTotalChatMembersCount = async (
-  userId: string,
-  search: string = ""
-): Promise<number> => {
-  const count = await prisma.chatMember.count({
-    where: {
-      userId,
-      archivedAt: null, // Exclude archived chats
-      chat: search
-        ? {
-            OR: [
-              { name: { contains: search, mode: "insensitive" } },
-              {
-                members: {
-                  some: {
-                    user: { email: { contains: search, mode: "insensitive" } },
-                  },
-                },
-              },
-            ],
-          }
-        : undefined,
-    },
-  });
-
-  return count;
-};
-
 // Function to get online users in a chat with cursor-based pagination
-const getOnlineUsersInChat = async (
+const getOnlineConversationIdsByChatId = async (
   chatId: string,
   // userId: string,
   cursor?: string,
@@ -288,6 +328,7 @@ const getOnlineUsersInChat = async (
 
     select: {
       id: true,
+      chatId: true,
       user: {
         select: {
           id: true,
@@ -306,57 +347,147 @@ const getOnlineUsersInChat = async (
     nextCursor,
   };
 };
+// /**
+//  * @description Get online users in user's chats for socketIo
+//  * @param userId
+//  * @param chatCursor
+//  * @param userCursor
+//  * @param batchSize
+//  * @returns
+//  */
+// const getOnlineConversationIdsByUserId = async (
+//   userId: string,
+//   userCursor?: string,
+//   batchSize: number = 100
+// ) => {
+//   // Step 1: Fetch online users across chats in a single query
+//   const onlineUsers = await prisma.chatMember.findMany({
+//     where: {
+//       chat: {
+//         members: { some: { userId } }, // Fetch chats where the current user is a member
+//       },
+//       user: { status: Status.ONLINE, id: { not: userId } }, // Exclude the current user
+//     },
+//     select: {
+//       chatId: true,
+//       id: true,
+//       user: {
+//         select: { id: true },
+//       },
+//     },
+//     distinct: ["userId"], // Ensure unique users
+//     take: batchSize,
+//     cursor: userCursor ? { id: userCursor } : undefined,
+//     orderBy: { updatedAt: "desc" },
+//   });
+//   const nextCursor =
+//     onlineUsers.length === batchSize ? onlineUsers[onlineUsers.length - 1].id : null;
+ 
 
-const getOnlineUsersInUserChats = async (
+//   return { onlineUsers, nextCursor};
+// };
+/**
+ * @description Get chatIds where the user is a member and at least one other user is online
+ * @param userId
+ * @param userCursor
+ * @param batchSize
+ * @returns
+ */
+const getOnlineConversationIdsByUserId = async (
   userId: string,
-  cursor?: string,
+  userCursor?: string,
   batchSize: number = 100
 ) => {
-  // Fetch the list of chats where the user is a member
-  const chatMembers = await prisma.chatMember.findMany({
+  // Step 1: Fetch chatIds where the user is a member and at least one other user is online
+  const chatsWithOnlineUsers = await prisma.chatMember.findMany({
     where: {
       chat: {
-        isGroup: false, // Filter for non-group chats
+        members: { some: { user: { status: Status.ONLINE, id: { not: userId } } } }, // At least one other online user
       },
-      userId: userId, // Fetch chats where the user is a member
     },
     select: {
-      chatId: true, // Get the chatId for each chat the user is a member of
+      chatId: true,
+      id: true,
     },
-    take: batchSize, // Paginate the chats for the user
-    cursor: cursor ? { id: cursor } : undefined, // Use cursor for pagination
+    distinct: ["chatId"], // Ensure unique chatIds
+    take: batchSize,
+    cursor: userCursor ? { id: userCursor } : undefined,
+    orderBy: { updatedAt: "desc" }, // Order by updatedAt or any other desired field
   });
 
-  // Extract chatIds from the chats where the user is a member
-  const chatIds = chatMembers.map((member) => member.chatId);
+  const nextCursor =
+    chatsWithOnlineUsers.length === batchSize
+      ? chatsWithOnlineUsers[chatsWithOnlineUsers.length - 1].id
+      : null;
 
-  // Fetch all online users in these chats (excluding the current user)
+  return { chatIds: chatsWithOnlineUsers.map((chat) => chat.chatId), nextCursor };
+};
+
+/**
+ * @description Get unique online users across chats for a given user
+ * @param req Request
+ * @returns Unique online users in the chats of the current user
+ */
+const getOnlineConversationsForClient = async (req: Request) => {
+  const {
+    chatCursor,
+    userCursor,
+    take = 10,
+  } = GetOnlineConversationsSchema.parse({
+    ...req.query,
+    userId: req.user.id,
+  });
+  const userId = req.user.id;
+
+  // Step 1: Fetch online users across chats in a single query
   const onlineUsers = await prisma.chatMember.findMany({
     where: {
-      chatId: { in: chatIds }, // Filter by the chats the user is a member of
-      user: {
-        status: Status.ONLINE, // Filter for online users
+      chat: {
+        members: { some: { userId } }, // Fetch chats where the current user is a member
       },
-      // userId: { not: userId }, // Exclude the current user from the online users
+      user: { status: Status.ONLINE, id: { not: userId } }, // Exclude the current user
     },
     select: {
+      chatId: true,
       id: true,
       user: {
-        select: {
-          id: true,
-        },
+        select: { id: true, name: true, image: true, status: true, lastActive: true },
       },
     },
-    take: batchSize, // Limit the number of online users per chat
-    cursor: cursor ? { id: cursor } : undefined, // Use cursor for pagination
+    distinct: ["userId"], // Ensure unique users
+    take,
+    cursor: userCursor ? { id: userCursor } : undefined,
+    orderBy: { updatedAt: "desc" },
   });
 
-  // Prepare nextCursor for pagination
-  const nextCursor =
-    onlineUsers.length === batchSize ? onlineUsers[onlineUsers.length - 1].id : null;
+  // Step 2: Count total unique online users directly from the database
+  const totalOnlineChatMembersCount = (await prisma.chatMember.findMany({
+    where: {
+      chat: {
+        members: { some: { userId } },
+      },
+      user: { status: Status.ONLINE, id: { not: userId } },
+    },
+    distinct: ["userId"],
+  })).length;
 
-  return { onlineUsers, nextCursor };
+  // Step 3: Determine pagination cursors
+  const nextUserCursor =
+    onlineUsers.length === take ? onlineUsers[onlineUsers.length - 1].id : null;
+
+  // Step 4: Format the response
+  return {
+    onlineChatMembers: onlineUsers.map((member) => ({
+      chatId: member.chatId,
+      id: member.id,
+      onlineUser: member.user,
+    })),
+    totalOnlineChatMembersCount,
+    nextUserCursor,
+  };
 };
+
+
 
 // Delete all chats - no change
 const deleteAllChats = async (req: Request) => {
@@ -368,7 +499,8 @@ export {
   addUserToChat,
   getChats,
   deleteAllChats,
-  getOnlineUsersInChat,
-  getOnlineUsersInUserChats,
+  getOnlineConversationIdsByChatId,
+  getOnlineConversationIdsByUserId,
+  getOnlineConversationsForClient,
   getTotalChatMembersCount,
 };

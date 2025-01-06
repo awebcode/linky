@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 
 // Extract the `id` type from SIDEBAR_TABS
-export type TabId =  "all" | "unread" | "favorite" | "groups"
+export type TabId =  "all" | "unread" | "favorite" | "groups" | "archived" | "muted"| "pinned"| "blocked";
 
 // Zustand store with properly typed state
 interface TabState {

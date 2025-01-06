@@ -1,5 +1,5 @@
 "use client"
-import {  OnlineUserList } from "./online-user-list";
+import {  OnlineUserList } from "./online-conversation-list";
 import { UserProfile } from "./user-profile";
 import SidebarInput from "./sidebar-input";
 import SidebarChatList from "./sidebar-chatlist";

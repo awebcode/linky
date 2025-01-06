@@ -12,107 +12,185 @@ import type { ChatConversation } from "@/types/chat";
 import { formatDistanceToNow } from "date-fns";
 import { useShallow } from "zustand/react/shallow";
 import { useMessageStore } from "@/hooks/useMessageStorage";
+import { forwardRef } from "react";
+import { useTabStore } from "@/hooks/useTabStore";
+import { WithTooltip } from "@/components/common/WithTooltip";
+import CardTypingIndicator from "../indicators/card-typing-indicator";
+import { useTypingStore } from "@/hooks/useTypingStore";
 
 interface ConversationCardProps {
   conversation: ChatConversation;
 }
 
-export function ConversationCard({ conversation }: ConversationCardProps) {
-  const setSelectedChat = useChatStore((state) => state.setSelectedChat);
-  const selectedChat = useChatStore(useShallow((state) => state.selectedChat));
-  const { message } = useMessageStore(useShallow((state) => state));
+export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps>(
+  ({ conversation }, ref) => {
+    const { typingUsers } = useTypingStore(useShallow((state) => state));
+    const { activeTab } = useTabStore(useShallow((state) => state));
+    const setSelectedChat = useChatStore((state) => state.setSelectedChat);
+    const { selectedChat, pinChat, favoriteChat, deleteChat, markAsUnread } =
+      useChatStore(useShallow((state) => state));
+    const { message } = useMessageStore(useShallow((state) => state));
+    const {
+      isGroup,
+      groupInfo,
+      user: { status, name, image },
+    } = conversation;
 
-  const {
-    isGroup,
-    groupInfo,
-    user: { status, name, image },
-  } = conversation;
+    // Get the draft message for the current conversation
+    const draftMessage = message[conversation.chatId] || "";
 
-  // Get the draft message for the current conversation
-  const draftMessage = message[conversation.id] || "";
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger>
-        <div
-          onClick={() => setSelectedChat(conversation)}
-          className={cn(
-            " p-2 my-1 hover:bg-accent dark:hover:bg-gray-900 rounded-lg cursor-pointer transition-colors",
-            { "bg-gray-200 dark:bg-gray-800": selectedChat?.id === conversation.id }
-          )}
-        >
-          <div className="flex items-center gap-3">
-            {isGroup ? (
-              <UserAvatar
-                src={groupInfo?.groupImage}
-                fallback={groupInfo?.groupName}
-                isOnline={false} // Groups don't have online status
-                size="md"
-              />
-            ) : (
-              <UserAvatar
-                src={image}
-                fallback={name}
-                isOnline={status === "ONLINE"}
-                size="md"
-              />
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div
+            ref={ref}
+            onClick={() => setSelectedChat(conversation)}
+            className={cn(
+              "p-2 my-1 hover:bg-accent dark:hover:bg-gray-900 rounded-lg cursor-pointer transition-colors",
+              {
+                "bg-gray-200 dark:bg-gray-800":
+                  selectedChat?.chatId === conversation.chatId,
+              }
             )}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between">
-                <h3 className="font-medium text-sm truncate">
-                  {isGroup ? groupInfo?.groupName : name}
-                </h3>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(
-                    conversation.lastMessage?.sentAt || conversation.createdAt,
-                    {
-                      addSuffix: true,
-                    }
+          >
+            <WithTooltip
+              content={
+                <div className="flex flex-col items-center gap-1">
+                  {isGroup ? (
+                    <UserAvatar
+                      src={groupInfo?.groupImage}
+                      fallback={groupInfo?.groupName}
+                      isOnline={false} // Groups don't have online status
+                      size="md"
+                    />
+                  ) : (
+                    <UserAvatar
+                      src={image}
+                      fallback={name}
+                      isOnline={status === "ONLINE"}
+                      size="md"
+                    />
                   )}
-                </span>
-              </div>
-              <div className="flex items-center justify-between max-w-full">
-                {draftMessage ? (
-                  <>
-                    <p className="text-sm  truncate font-semibold">
-                      <span className="text-primary"> Draft:</span> {draftMessage}
-                    </p>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground truncate">
-                    {conversation.lastMessage?.content}
-                  </p>
-                )}
-                {conversation.unreadCount > 0 && (
-                  <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
-                    {conversation.unreadCount}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </ContextMenuTrigger>
 
-      <ContextMenuContent>
-        <ContextMenuItem>{isGroup ? "View Group Info" : "View Profile"}</ContextMenuItem>
-        {isGroup ? (
-          <>
-            <ContextMenuItem>Leave Group</ContextMenuItem>
-          </>
-        ) : (
-          <>
-            <ContextMenuItem>Call</ContextMenuItem>
-            <ContextMenuItem>Mute</ContextMenuItem>
-            <ContextMenuItem>Block</ContextMenuItem>
-          </>
-        )}
-        <ContextMenuSeparator />
-        <ContextMenuItem>
-          {isGroup ? "Delete Group Chat" : "Delete Conversation"}
-        </ContextMenuItem>
-        <ContextMenuItem>Clear Chat History</ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenu>
-  );
-}
+                  <p>{isGroup ? groupInfo?.groupName : name}</p>
+
+                  <span className="text-xs text-primary">
+                    {" "}
+                    {conversation.membersCount} - Members
+                  </span>
+                </div>
+              }
+            >
+              <div className="flex items-center gap-3">
+                {isGroup ? (
+                  <UserAvatar
+                    src={groupInfo?.groupImage}
+                    fallback={groupInfo?.groupName}
+                    isOnline={false} // Groups don't have online status
+                    size="md"
+                  />
+                ) : (
+                  <UserAvatar
+                    src={image}
+                    fallback={name}
+                    isOnline={status === "ONLINE"}
+                    size="md"
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-sm truncate">
+                      {isGroup ? groupInfo?.groupName : name}
+                    </h3>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(
+                        conversation.lastMessage?.sentAt || conversation.createdAt,
+                        {
+                          addSuffix: true,
+                        }
+                      )}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between max-w-full">
+                    {typingUsers.filter((user) => user.chatId === conversation?.chatId)
+                      .length > 0 ? (
+                      <>
+                        <CardTypingIndicator />
+                      </>
+                    ) : draftMessage ? (
+                      <>
+                        <p className="text-sm truncate font-semibold">
+                          <span className="text-primary"> Draft:</span> {draftMessage}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground truncate">
+                        {conversation.lastMessage?.content}
+                      </p>
+                    )}
+                    {conversation.unreadCount > 0 && (
+                      <span className="ml-2 px-2 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                        {conversation.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </WithTooltip>
+          </div>
+        </ContextMenuTrigger>
+
+        <ContextMenuContent>
+          <ContextMenuItem onClick={() => setSelectedChat(conversation)}>
+            {isGroup ? "View Group Info" : "View Profile"}
+          </ContextMenuItem>
+          {isGroup ? (
+            <>
+              <ContextMenuItem onClick={() => pinChat(conversation.chatId, activeTab)}>
+                Pin Group Chat
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => favoriteChat(conversation.chatId, activeTab)}
+              >
+                Favorite Group Chat
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => markAsUnread(conversation.chatId, activeTab)}
+              >
+                Mark as Unread
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => deleteChat(conversation.chatId, activeTab)}>
+                Delete Group Chat
+              </ContextMenuItem>
+            </>
+          ) : (
+            <>
+              <ContextMenuItem onClick={() => pinChat(conversation.chatId, activeTab)}>
+                Pin Conversation
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => favoriteChat(conversation.chatId, activeTab)}
+              >
+                Favorite Conversation
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={() => markAsUnread(conversation.chatId, activeTab)}
+              >
+                Mark as Unread
+              </ContextMenuItem>
+              <ContextMenuItem onClick={() => deleteChat(conversation.chatId, activeTab)}>
+                Delete Conversation
+              </ContextMenuItem>
+            </>
+          )}
+          <ContextMenuSeparator />
+          <ContextMenuItem onClick={() => deleteChat(conversation.chatId, activeTab)}>
+            Clear Chat History
+          </ContextMenuItem>
+        </ContextMenuContent>
+      </ContextMenu>
+    );
+  }
+);
+
+ConversationCard.displayName = "ConversationCard";

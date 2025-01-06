@@ -91,7 +91,7 @@ export const ChatSideNavigation: React.FC = () => {
         {isMobile && (
           <UserActionDropdown
             asChild={false}
-            trigger={<UserAvatar user={user} />}
+            trigger={<UserAvatar user={{ ...user, status: "ONLINE" } as any} />}
             items={userMenuItems}
           />
         )}
@@ -102,7 +102,7 @@ export const ChatSideNavigation: React.FC = () => {
         <div className={`flex flex-col items-center space-y-4 py-4`}>
           <UserActionDropdown
             asChild={false}
-            trigger={<UserAvatar user={user} />}
+            trigger={<UserAvatar user={{ ...user, status: "ONLINE" } as any} />}
             items={userMenuItems}
           />
         </div>

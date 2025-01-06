@@ -1,37 +1,104 @@
+import type { MessageResponse } from "@/types/message"; // Assuming MessageResponse is the type for individual messages
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
-import type { Message } from "@/types/message";
+import { zustandIndexedDBStorage } from "./cache/usePersist";
+import { debounce } from "./use-debounce";
 
 interface MessageStore {
   message: Record<string, string>; // Draft message for each chat ID
-  messages: Record<string, Message[]>; // Messages grouped by chat ID
-  files: Record<string, File[]>;
-  setMessages: (chatId: string, messages: Message[]) => void;
+  messages: Record<string, MessageResponse[]>; // Messages grouped by chat ID (using MessageResponse)
+  files: Record<string, File[]>; // Files grouped by chat ID
+  totalMessagesCount: Record<string, number>; // Total messages count per chat ID
+  setMessages: (
+    chatId: string,
+    messages: MessageResponse[],
+    totalMessagesCount: number
+  ) => void; // Set messages for a specific chat
+  addMessages: (
+    chatId: string,
+    newMessages: MessageResponse[],
+    totalMessagesCount: number
+  ) => void; // Append new messages to existing ones
   setMessage: (chatId: string, message: string) => void; // Draft message per chat
-  setFiles: (chatId: string, files: File[]) => void;
-  updateMessageStatus: (chatId: string, messageId: string, status: string) => void;
-  clearMessages: (chatId: string) => void;
-  clearDraft: (chatId: string) => void; // Clear draft message for a chat
+  setFiles: (chatId: string, files: File[]) => void; // Set files for a specific chat
+  updateMessageStatus: (chatId: string, messageId: string, status: string) => void; // Update message status
+  clearMessages: (chatId: string) => void; // Clear messages for a specific chat
+  clearDraft: (chatId: string) => void; // Clear draft message for a specific chat
 }
 
 export const useMessageStore = create<MessageStore>()(
   persist(
     (set) => ({
       // Initial state
-      message: {}, // Store draft per chat ID
-      messages: {},
-      files: {},
+      message: {}, // Store draft messages per chat ID
+      messages: {}, // Store messages per chat ID (using MessageResponse)
+      files: {}, // Store files per chat ID
+      totalMessagesCount: {}, // Store total message counts per chat ID
+      // Set or update messages for a specific chat (merges with existing messages and ensures uniqueness)
+      setMessages: (
+        chatId: string,
+        newMessages: MessageResponse[],
+        totalMessagesCount: number = 0
+      ) =>
+        set((state) => {
+          const existingMessages = state.messages[chatId] || [];
+          const allMessages = [...newMessages, ...existingMessages];
+          const uniqueMessages = allMessages.filter(
+            (msg, index, self) =>
+              index ===
+              self.findIndex(
+                (m) => (m.id && m.id === msg.id) || (!m.id && m.tempId === msg.tempId)
+              )
+          );
+
+          const newCount =
+            totalMessagesCount !== undefined
+              ? totalMessagesCount
+              : (state.totalMessagesCount[chatId] || 0) + newMessages.length; // Debounce the function that updates the totalMessagesCount
+
+          return {
+            messages: { ...state.messages, [chatId]: uniqueMessages },
+            totalMessagesCount: {
+              ...state.totalMessagesCount,
+              [chatId]: newCount
+            },
+          
+          };
+        }),
+
+      // Add more messages to an existing chat (for pagination or new messages)
+      addMessages: (
+        chatId: string,
+        newMessages: MessageResponse[],
+        totalMessagesCount: number
+      ) =>
+        set((state) => {
+          const existingMessages = state.messages[chatId] || [];
+          const allMessages = [...existingMessages, ...newMessages];
+          const uniqueMessages = allMessages.filter(
+            (msg, index, self) =>
+              index ===
+              self.findIndex(
+                (m) => (m.id && m.id === msg.id) || (!m.id && m.tempId === msg.tempId)
+              )
+          );
+
+          return {
+            messages: { ...state.messages, [chatId]: uniqueMessages },
+            totalMessagesCount: {
+              ...state.totalMessagesCount,
+              [chatId]:
+                totalMessagesCount !== 0
+                  ? totalMessagesCount
+                  : state.totalMessagesCount[chatId],
+            },
+          };
+        }),
 
       // Set draft message for a specific chat
       setMessage: (chatId: string, message: string) =>
         set((state) => ({
           message: { ...state.message, [chatId]: message },
-        })),
-
-      // Set messages for a specific chat
-      setMessages: (chatId: string, messages: Message[]) =>
-        set((state) => ({
-          messages: { ...state.messages, [chatId]: messages },
         })),
 
       // Set files for a specific chat
@@ -54,7 +121,11 @@ export const useMessageStore = create<MessageStore>()(
       clearMessages: (chatId: string) =>
         set((state) => {
           const { [chatId]: _, ...rest } = state.messages;
-          return { messages: rest };
+          const { [chatId]: count, ...countRest } = state.totalMessagesCount;
+          return {
+            messages: rest,
+            totalMessagesCount: countRest,
+          };
         }),
 
       // Clear draft for a specific chat
@@ -66,11 +137,11 @@ export const useMessageStore = create<MessageStore>()(
     }),
     {
       name: "message-storage",
-      storage: createJSONStorage(() => localStorage),
-      // partialize: (state) => {
-      //   const { message, ...rest } = state;
-      //   return rest;
-      // },
+      storage: createJSONStorage(() => zustandIndexedDBStorage),
+      partialize(state) {
+        const { messages, ...rest } = state;
+        return rest;
+      },
     }
   )
 );

@@ -27,3 +27,16 @@ enum MessageStatus {
   DELIVERED // Message has been delivered to the recipient(s)
   READ // Message has been read by the recipient(s)
 }
+
+// Enum to represent notification status
+enum NotificationState {
+  UNMUTED // Notifications are on
+  MUTED // Notifications are off
+  BLOCKED // Blocked from interacting with the chat
+}
+
+//
+enum BlockAction {
+  BLOCKED
+  UNBLOCKED
+}

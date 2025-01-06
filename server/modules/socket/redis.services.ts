@@ -13,7 +13,7 @@ const isOnlineR = async (userId: string) => {
 const setUserOnline = async (userId: string) => {
   try {
     if(!userId) return
-    await pubClient.setEx(`online_user:${userId}`, 120, "online");
+    await pubClient.setEx(`online_user:${userId}`, 120, "online"); // Set user online for 2 minutes
     await pubClient.sAdd("online_users_set", userId);
   } catch (error) {
     loggerInstance.error(`Error setting user online: ${userId}`, error);

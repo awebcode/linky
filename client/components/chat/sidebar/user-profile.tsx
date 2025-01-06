@@ -1,8 +1,6 @@
 "use client";
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import UserDropdown from "./user-action-dropdown";
-import { WithDropdown } from "@/components/common/WithDropdown";
 import { useUser } from "@/hooks/use-user";
 import UserAvatar from "@/components/common/UserAvatar";
 import UserActionDropdown from "./user-action-dropdown";
@@ -14,7 +12,7 @@ export function UserProfile() {
   return (
     <div className="p-4 border-b flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <UserAvatar src={user?.image} fallback={user?.name} />
+        <UserAvatar src={user?.image} fallback={user?.name} isOnline />
         <div>
           <h3 className="font-medium">{user?.name}</h3>
           <p className="text-sm text-muted-foreground">{user?.status}</p>

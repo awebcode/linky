@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Status, type NotificationState } from "@prisma/client";
+import { Status, type NotificationState, type BlockAction } from "@prisma/client";
 export interface User {
   id: number;
   name: string;
@@ -54,18 +54,30 @@ export interface Message {
   senderId: string;
 }
 
-
-
 export interface BlockedStatus {
-  status: "BLOCKED" | "NOT_BLOCKED"; // Indicates if the current user is blocked
+  status: BlockAction; // Indicates if the current user is blocked
   blockedUntil: Date | null; // Date until the user is blocked
   blockedBy: ChatConversationUser | null; // User who blocked the current user
 }
+/**
+ * Interface for the count of total chats, unread chats, favorite chats, and group chats
+ */
+export type ChatsCount = {
+  totalChatsCount: number;
+  unreadChatsCount: number;
+  favoriteChatsCount: number;
+  groupChatsCount: number;
+  pinnedChatsCount: number;
+  blockedChatsCount: number;
+  mutedChatsCount: number;
+  archivedChatsCount: number;
+};
 
 export interface ChatConversation {
   id: string;
+  chatId: string;
   nextCursor: string;
-  totalCount: number;
+  // totalChatMembersCount: number;
   unlistedUsers: ChatConversationUser[]; // Users not yet added to the chat (for search purposes)
   nextUnlistedCursor: string | null; // Cursor for pagination in unlisted users
 
@@ -117,4 +129,38 @@ export interface ChatConversation {
 
   // The date when the chat was pinned (null if not pinned)
   pinnedAt: Date | null;
+  favoriteAt: Date | null;
+  unreadAt: Date | null;
+  
+
+}
+
+//online conversations
+export interface OnlineUser {
+  id: string;
+  name: string;
+  image: string;
+  status: string;
+  lastActive: Date;
+}
+
+interface OnlineChatMember {
+  chatId: string;
+  id: string;
+  onlineUser: OnlineUser;
+}
+
+export interface GetOnlineConversationsResponse {
+  onlineChatMembers: OnlineChatMember[];
+  totalOnlineChatMembersCount: number;
+  nextChatCursor: string | null;
+  nextUserCursor: string | null;
+}
+
+// Inputs
+
+export interface CreateChatInput {
+  members: string[];
+  isGroupChat: boolean;
+  name?: string;
 }

@@ -14,7 +14,7 @@ export const useSocket = () => {
         token: localStorage.getItem("token"),
       },
       query: {
-        userId:localStorage.getItem("userId"),
+        userId: localStorage.getItem("userId"),
       },
       transports: ["websocket", "polling", "xhr-polling", "webtransport"],
       autoConnect: true,

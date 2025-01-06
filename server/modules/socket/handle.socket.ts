@@ -1,100 +1,134 @@
-import { Server, Socket } from "socket.io";
-import http from "http";
+// socket/socket.events.ts
+import { Socket, Server } from "socket.io";
 import { Status } from "@prisma/client";
-
+import { isOnlineR, setUserOnline, removeUserOnline } from "./redis.services";
+import { getOnlineConversationIdsByUserId } from "./conn.socket.services";
 import { loggerInstance } from "../../config/logger.config";
-import { pubClient, subClient } from "../../config/redis.config";
-import { createAdapter } from "@socket.io/redis-adapter";
-import prisma from "../../libs/prisma";
-import { isOnlineR, removeUserOnline, setUserOnline } from "./redis.services";
-import { sentStatusChanged } from "./conn.socket.services";
-import { disconnect } from "process";
-let io: Server;
+import { SocketEvents } from "./socket.events";
+import { isFalsy, updateDatabaseUserStatus } from "./socket.utils";
+import type { z } from "zod";
+import { createMessageForSocket } from "./db.socket";
+import type { CreateSocketMessageSchema } from "./dtos.socket";
+import { handleMessage, handleStartTyping, handleStopTyping } from "./message.socket";
+
+const BatchSize = 250;
 
 /**
- * Initialize the Socket.io server with Redis adapter and necessary event listeners.
- * @param {http.Server} server - The HTTP server to attach the WebSocket server to.
+ * Handle a new connection event.
+ * @param socket - The connected Socket instance.
+ * @param io - The Socket.io Server instance.
  */
-const initSocket = (server: http.Server) => {
-  io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-    adapter: createAdapter(pubClient, subClient),
-    perMessageDeflate: {
-      threshold: 1024, // Only compress messages larger than 1 KB
-    },
-    allowEIO3: true, // Enable support for EIO 3
-    transports: ["websocket", "polling", "webtransport"],
-  });
+export const handleSocketEvents = (socket: Socket, io: Server) => {
+  const userId = socket.handshake.query.userId as string;
+  // Early exit if userId is invalid
+  if (isFalsy(userId)) {
+    return; // Exit early if userId is invalid
+  }
+  socket.on(SocketEvents.HEART_BEAT, () => handleHeartbeat(userId));
+  socket.on(SocketEvents.MESSAGE_SENT, (data) => handleMessage(data, io));
+  socket.on(SocketEvents.USER_START_TYPING, (data) => handleStartTyping(data, socket));
+  socket.on(SocketEvents.USER_STOP_TYPING, (data) => handleStopTyping(data, socket));
+  socket.on("disconnect", () => handleDisconnect(userId, socket, io));
 
-  io.on("connection", (socket: Socket) => {
-    console.log("New socket connection", socket.id);
-    const userId = socket.handshake.query.userId as string;
-
-    // Handle user heartbeat to keep the socket active
-    socket.on("heartbeat", async () => {
-      if (userId) {
-        try {
-          // Update the user's online status in Redis
-          await setUserOnline(userId);
-          console.log(`User ${userId} heartbeat received and updated.`);
-        } catch (error) {
-          loggerInstance.error(`Error updating heartbeat for user ${userId}`, error);
-        }
-      }
-    });
-
-    // Handle user going online
-    socket.on("user-online", async ({ userId }: { userId: string }) => {
-      if (!userId) {
-        loggerInstance.warn("User ID not provided for online event");
-        return;
-      }
-
-      try {
-        // Check if the user is already online
-        const isOnline = await isOnlineR(userId);
-        if (!isOnline) {
-          // User is going online for the first time, store user-to-socket mapping
-          await setUserOnline(userId);
-          await prisma.user.update({
-            where: { id: userId },
-            data: { status: Status.ONLINE },
-          });
-          // Notify other users about the user's online status
-          await sentStatusChanged(userId, Status.ONLINE);
-        }
-      } catch (error) {
-        loggerInstance.error(`Error handling online event for user ${userId}`, error);
-      }
-    });
-
-    // Handle user disconnection
-    socket.on("disconnect", async () => {
-      if (!userId) {
-        loggerInstance.warn("User ID not provided for disconnect event");
-        return;
-      }
-
-      try {
-        // Remove user-to-socket mapping from Redis and update database status to offline
-        await removeUserOnline(userId);
-        await prisma.user.update({
-          where: { id: userId },
-          data: { status: Status.OFFLINE },
-        });
-
-        // Notify other users about the user's offline status
-        io.emit("user_status_changed", { userId, status: Status.OFFLINE });
-
-        console.log(`User ${userId} disconnected and status updated.`);
-      } catch (error) {
-        loggerInstance.error(`Error handling disconnect for user ${userId}`, error);
-      }
-    });
-  });
+  initializeUserConnection(userId, socket, io);
 };
 
-export { initSocket, io };
+const initializeUserConnection = async (userId: string, socket: Socket, io: Server) => {
+  try {
+    console.log("New user connected:", userId);
+
+    // Check if user is already online (in memory or via a quick lookup)
+    const isOnline = await isOnlineR(userId); // Maybe optimize by checking in memory first
+
+    if (userId && !isOnline) {
+      // Set user status to ONLINE in database
+      await setUserOnline(userId);
+      const user = await updateDatabaseUserStatus(userId, Status.ONLINE);
+
+      // Fetch online conversation IDs the user is part of
+      const onlineConversationIds = await getOnlineConversationIdsByUserId(userId);
+
+      // Prevent re-joining the same room by checking socket's current rooms
+      const userRooms = Object.keys(socket.rooms);
+
+      // Join chat rooms in batches
+      for (let i = 0; i < onlineConversationIds.length; i += BatchSize) {
+        const chunk = onlineConversationIds.slice(i, i + BatchSize);
+
+        // Join the chat room only if the socket is not already in the room
+        for (let chatId of chunk) {
+          if (!userRooms.includes(chatId)) {
+            socket.join(chatId);
+          }
+        }
+
+        // Emit USER_ONLINE event to the room
+        socket.to(chunk).emit(SocketEvents.USER_ONLINE, {
+          user: {
+            ...user,
+            id: userId,
+            status: Status.ONLINE, // Make sure the status is ONLINE
+          },
+        });
+      }
+    }
+  } catch (error) {
+    loggerInstance.error("Error initializing user connection:", error);
+  }
+};
+
+/**
+ * Handle user heartbeat.
+ */
+const handleHeartbeat = async (userId: string) => {
+  if (userId) {
+    try {
+      await setUserOnline(userId);
+      console.log(`User ${userId} heartbeat received and updated.`);
+    } catch (error) {
+      loggerInstance.error(`Error updating heartbeat for user ${userId}`, error);
+    }
+  }
+};
+
+/**
+ * Handle user disconnection and remove them from inactive rooms.
+ */
+const handleDisconnect = async (userId: string, socket: Socket, io: Server) => {
+  if (isFalsy(userId)) {
+    loggerInstance.warn("User ID not provided for disconnect event");
+    return true;
+  }
+
+  try {
+    const isOnline = await isOnlineR(userId);
+
+    if (!isOnline) {
+      // Remove user from online tracking (if you have a cache like Redis, update it here)
+      await removeUserOnline(userId);
+
+      // Update user's status to OFFLINE in the database
+      const user = await updateDatabaseUserStatus(userId, Status.OFFLINE);
+
+      // Fetch all online conversation IDs for the user
+      const onlineConversationIds = await getOnlineConversationIdsByUserId(userId);
+
+      // Join chat rooms in batches
+      for (let i = 0; i < onlineConversationIds.length; i += BatchSize) {
+        const chunk = onlineConversationIds.slice(i, i + BatchSize);
+
+        socket.to(chunk).emit(SocketEvents.USER_OFFLINE, {
+          user: { ...user, id: userId, status: Status.OFFLINE },
+        }); // Notify others in the room
+      }
+
+      // // Optionally, log the disconnect event with more detailed information
+      console.log(
+        `User ${userId} disconnected and removed from ${Object.keys(socket.rooms).length
+        } active rooms.`
+      );
+    }
+  } catch (error) {
+    loggerInstance.error(`Error handling disconnect for user ${userId}:`, error);
+  }
+};

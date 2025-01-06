@@ -1,6 +1,6 @@
 import express from "express";
 import http from "http";
-import { initSocket } from "./modules/socket/handle.socket";
+import { initSocket } from "./modules/socket/index.socket";
 import {
   errorHandler,
   NotFoundExceptionMiddleware,
@@ -50,7 +50,7 @@ if (cluster.isPrimary) {
   initSocket(server);
   
   // Initialize Queue
-  initQueue();
+  // initQueue();
 
   // Set up Redis adapter for scaling across workers
   // setupSocketAdapter(server);

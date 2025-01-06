@@ -6,50 +6,6 @@ import {
   MarkMessageAsSeenSchema,
 } from "./message.dtos";
 import { uploadMultipleFiles } from "../../config/cloudinary.config";
-import type { Message, Prisma } from "@prisma/client";
-
-// Helper function to fetch reactions with next cursor support
-async function getReactions(messageIds: string[], cursor?: string, limit: number = 10) {
-  const reactions = await prisma.reaction.groupBy({
-    by: ["messageId", "emoji"],
-    where: { messageId: { in: messageIds } },
-    _count: { emoji: true },
-    orderBy: { _count: { emoji: "desc" } },
-    skip: cursor ? 1 : 0,
-    take: limit,
-  });
-
-  const nextCursor = reactions.length > limit ? reactions[limit - 1].messageId : null;
-
-  return { reactions, nextCursor };
-}
-
-// Helper function to fetch seen users with next cursor support
-async function getSeenUsers(messageIds: string[], cursor?: string, limit: number = 10) {
-  const seenUsers = await prisma.messageSeen.findMany({
-    where: { messageId: { in: messageIds } },
-    select: {
-      messageId: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-          status: true,
-        },
-      },
-      seenAt: true,
-    },
-    skip: cursor ? 1 : 0,
-    take: limit,
-    cursor: cursor ? { id: cursor } : undefined,
-    orderBy: { seenAt: "desc" },
-  });
-
-  const nextCursor = seenUsers.length > limit ? seenUsers[limit - 1].messageId : null;
-
-  return { seenUsers, nextCursor };
-}
 
 // Helper function to get top emojis with total count and pagination support
 async function getTopEmojisWithTotalCount(
@@ -57,7 +13,7 @@ async function getTopEmojisWithTotalCount(
   cursor?: string,
   limit: number = 4
 ) {
-  const [reactions, totalCount] = await Promise.all([
+  const [reactions, totalCount] = await prisma.$transaction([
     prisma.reaction.groupBy({
       by: ["emoji"],
       where: { messageId },
@@ -75,7 +31,7 @@ async function getTopEmojisWithTotalCount(
     totalCount,
     topEmojis: reactions.map((reaction) => ({
       emoji: reaction.emoji,
-      count: reaction._count.emoji,
+      count: reaction?._count,
     })),
     nextCursor,
   };
@@ -86,7 +42,7 @@ const createMessage = async (req: Request) => {
   const { content, chatId } = CreateMessageSchema.parse(req.body);
   const senderId = req.user.id;
 
-  const createData: any = {
+  const createData = {
     content,
     senderId,
     chatId,
@@ -94,10 +50,9 @@ const createMessage = async (req: Request) => {
 
   if (req.files && (req.files as Express.Multer.File[]).length) {
     const uploadedFiles = await uploadMultipleFiles(req);
-    createData["media"] = {
+    (createData as any)["media"] = {
       createMany: {
         data: uploadedFiles.map((file) => ({
-          
           url: file.url,
           publicId: file.public_id,
         })),
@@ -107,11 +62,19 @@ const createMessage = async (req: Request) => {
 
   return await prisma.message.create({ data: createData });
 };
-
-// Main function to get messages with reactions and seen users
+/**
+ * @title Function to get messages
+ * @param req 
+ * @returns  Object
+ */
 const getMessages = async (req: Request) => {
-  const { chatId, cursor, limit } = GetMessagesSchema.parse(req.params);
+  // Validate and parse query parameters using your schema
+  const { chatId, cursor,take } = GetMessagesSchema.parse({
+    ...req.query,
+    chatId: req.params.chatId,
+  });
 
+  // Prisma Query Optimization: Group reactions by messageId at the database level
   const messages = await prisma.message.findMany({
     where: { chatId },
     select: {
@@ -119,54 +82,114 @@ const getMessages = async (req: Request) => {
       content: true,
       sentAt: true,
       status: true,
-      sender: { select: { id: true, name: true, image: true } },
-      media: { select: { id: true, type: true, url: true } },
+      sender: {
+        select: {
+          id: true,
+          name: true,
+          image: true,
+          status: true,
+          lastActive: true,
+        },
+      },
+      media: { take: 5, select: { id: true, type: true, url: true } },
+      reactions: {
+        select: {
+          emoji: true,
+        },
+      },
+      MessageSeen: {
+        take: 5,
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              image: true,
+              status: true,
+              lastActive: true,
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          reactions: true,
+          MessageSeen: true,
+          media: true,
+
+        },
+
+      },
     },
-    take: limit,
+    
+    take:take,
     skip: cursor ? 1 : 0,
     cursor: cursor ? { id: cursor } : undefined,
-    orderBy: { sentAt: "desc" },
+    orderBy: { sentAt: "desc" }, // Sort by sentAt in descending order
   });
 
-  const messageIds = messages.map((message) => message.id);
+  // Optimize: Directly process reactions in memory (not by `flatMap`)
+  const messagesWithReactions = await Promise.all(
+    messages.map(async (message) => {
+      // Group reactions by emoji and count them
+      const reactionCounts = message.reactions.reduce<{ [emoji: string]: number }>(
+        (acc, { emoji }) => {
+          acc[emoji] = (acc[emoji] || 0) + 1;
+          return acc;
+        },
+        {}
+      );
 
-  // Fetch reactions and seen users in parallel
-  const [reactionData, seenUserData] = await Promise.all([
-    getReactions(messageIds, cursor, limit),
-    getSeenUsers(messageIds, cursor, limit),
-  ]);
+      const topReactions = Object.entries(reactionCounts)
+        .sort(([, a], [, b]) => b - a) // Sort by count, descending
+        .slice(0, 4)
+        .map(([emoji, count]) => ({ emoji, count }));
 
-  const messageDetails = messages.map((message) => ({
-    ...message,
-    reactions: reactionData.reactions
-      .filter((reaction) => reaction.messageId === message.id)
-      .map((reaction) => ({
-        emoji: reaction.emoji,
-        count: reaction._count.emoji,
-      })),
-    seen: seenUserData.seenUsers
-      .filter((seen) => seen.messageId === message.id)
-      .map((seen) => ({
-        user: seen.user,
-        seenAt: seen.seenAt,
-      })),
-  }));
+      // Get the total count of reactions
+      // const totalReactionsCount = Object.values(reactionCounts).reduce(
+      //   (sum, count) => sum + count,
+      //   0
+      // );
 
+      // Get the top 5 seen users
+      const topSeenUsers = message.MessageSeen.slice(0, 5).map((seen) => seen.user);
+
+      // Get the total count of seen users
+      const totalSeenUsersCount = message._count.MessageSeen;
+
+      // Get the total count of reactions
+      const totalReactionsCount = message._count.reactions;
+      const totalMediaCount = message._count.media;
+
+      return {
+        ...message,
+        reactions: topReactions,
+        totalReactionsCount,
+        seenUsers: topSeenUsers,
+        totalSeenUsersCount,
+        totalMediaCount,
+      };
+    })
+  );
+ const totalMessagesCount = await prisma.message.count({ where: { chatId } });
+  // Return the processed messages along with the next cursor for pagination
   return {
-    messages: messageDetails,
-    nextCursor: reactionData.nextCursor || seenUserData.nextCursor || null,
+    messages: messagesWithReactions,
+    nextCursor: messages.length ===take ? messages[messages.length - 1].id : null,
+    totalMessagesCount
   };
 };
 
+
 // Function to get seen users with pagination
-async function getSeenUsersWithPagination(
-  messageId: string,
-  cursor?: string,
-  limit: number = 10
-) {
-  const { seenUsers, nextCursor } = await getSeenUsers([messageId], cursor, limit);
-  return { seenUsers, nextCursor };
-}
+// async function getSeenUsersWithPagination(
+//   messageId: string,
+//   cursor?: string,
+//   limit: number = 10
+// ) {
+//   const { seenUsers, nextCursor } = await getSeenUsers([messageId], cursor, limit);
+//   return { seenUsers, nextCursor };
+// }
 
 // Function to mark a message as seen
 const markMessageAsSeen = async (req: Request) => {
@@ -198,5 +221,4 @@ export {
   getMessages,
   markMessageAsSeen,
   getTopEmojisWithTotalCountForMessage,
-  getSeenUsersWithPagination,
 };

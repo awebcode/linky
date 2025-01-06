@@ -26,4 +26,24 @@ export const GetChatsQuerySchema = z.object({
     .refine((value) => value >= 1 && value <= 100, {
       message: "Take must be between 1 and 100",
     }), // Validate range after conversion
+  filter: z.enum(["all", "unread", "favorite", "groups"]).optional(),
+  chatIds: z.array(z.string()).optional(),
+});
+
+
+// Define the Zod schema for the query parameters
+export const GetOnlineConversationsSchema = z.object({
+  userId: z.string(), // Assuming userId is a valid UUID string
+  chatCursor: z.string().optional(), // chatCursor is optional, but should be a string if present
+  userCursor: z.string().optional(), // userCursor is optional, but should be a string if present
+  take: z
+    .string() // Accept `take` as a string
+    .optional()
+    .refine((value) => value === undefined || !isNaN(Number(value)), {
+      message: "Take must be a number",
+    }) // Check if it can be converted to a number
+    .transform((value) => (value !== undefined ? Number(value) : 10)) // Convert to number, default to 10
+    .refine((value) => value >= 1 && value <= 100, {
+      message: "Take must be between 1 and 100",
+    }), // Validate range after conversion
 });
