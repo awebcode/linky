@@ -11,12 +11,14 @@ import { CallDialog } from "./dialog/call-dialog";
 import { useMessageStore } from "@/hooks/useMessageStorage";
 import CardTypingIndicator from "./indicators/card-typing-indicator";
 import { useTypingStore } from "@/hooks/useTypingStore";
+import { useUser } from "@/hooks/use-user";
 
 interface ChatHeaderProps {
   className?: string;
 }
 
-export function ChatHeader({}: ChatHeaderProps) {
+export function ChatHeader({ }: ChatHeaderProps) {
+  const {user:currentUser} = useUser();
   const selectedChat = useChatStore(useShallow((state) => state.selectedChat));
   const { typingUsers } = useTypingStore(useShallow((state) => state));
   const { totalMessagesCount } = useMessageStore(useShallow((state) => state));
@@ -39,6 +41,7 @@ export function ChatHeader({}: ChatHeaderProps) {
   const {
     isGroup,
     user: { name, image, status },
+    onlineUsers,
     groupInfo,
   } = selectedChat;
 
@@ -48,7 +51,7 @@ export function ChatHeader({}: ChatHeaderProps) {
   };
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b">
+    <div className="flex items-center justify-between px-6 py-4 border-b max-w-[100vw]">
       <div className="flex items-center gap-3">
         {/* Back Button */}
         <IconButton onClick={handleBackButtonClick} className="w-fit text-primary">
@@ -57,16 +60,20 @@ export function ChatHeader({}: ChatHeaderProps) {
 
         {/* Avatar and Chat Info */}
         {isGroup ? (
-          <UserAvatar src={groupInfo?.groupImage} fallback={groupInfo?.groupName} />
+          <UserAvatar
+            src={groupInfo?.groupImage}
+            fallback={groupInfo?.groupName}
+            isOnline={onlineUsers?.length > 0}
+          />
         ) : (
-          <UserAvatar src={image} fallback={name} />
+          <UserAvatar src={image} fallback={name} isOnline={onlineUsers?.length > 0} />
         )}
         <div>
           <h2 className="font-semibold">{isGroup ? groupInfo?.groupName : name}</h2>
-          <p className="text-sm text-muted-foreground"></p>
+          <p className="text-sm text-muted-foreground max-w-[75%]"></p>
           {typingUsers.filter((user) => user.chatId === selectedChat?.chatId).length >
           0 ? (
-            <CardTypingIndicator />
+            <CardTypingIndicator chatId={selectedChat.chatId} userId={currentUser.id} />
           ) : isGroup ? (
             `${selectedChat.membersCount} members`
           ) : (

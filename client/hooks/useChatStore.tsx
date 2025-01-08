@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { debounce } from "./use-debounce";
-import type { ChatConversation, Message } from "@/types/chat";
+import type { ChatConversation, ChatConversationUser, Message, OnlineUser } from "@/types/chat";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { zustandIndexedDBStorage } from "./cache/usePersist";
 import type { UnlistedUser } from "@/types/user";
@@ -26,7 +26,10 @@ interface ChatStore {
   blockedChats: Set<string>; // Set to store blocked chat IDs
   mutedUntil: Record<string, number>; // Mapping of chat IDs to mute expiration times
 
-
+  bulkUpdateConversationsForOnlineOffline: (
+    chatIds: string[],
+    userInfo: ChatConversationUser //OnlineUser|
+  ) => void;
   setChats: (
     activeTab: TabId,
     chats: ChatConversation[],
@@ -93,14 +96,17 @@ export const useChatStore = create<ChatStore>()(
           set((state) => {
             const existingChats = state.chats[activeTab] || [];
 
-            // Combine existing chats and new chats, ensuring no duplicates
-            const combinedChats = [
-              ...existingChats.filter(
-                (existingChat) =>
-                  !chats.some((newChat) => newChat.chatId === existingChat.chatId)
-              ),
-              ...chats,
-            ];
+            // Create a Map to ensure uniqueness by chatId
+            const chatMap = new Map<string, ChatConversation>();
+
+            // Add existing chats to the map
+            existingChats.forEach((chat) => chatMap.set(chat.chatId, chat));
+
+            // Add new chats to the map (overwriting duplicates based on chatId)
+            chats.forEach((chat) => chatMap.set(chat.chatId, chat));
+
+            // Convert the map values back to an array
+            const combinedChats = Array.from(chatMap.values());
 
             return {
               chats: {
@@ -139,10 +145,10 @@ export const useChatStore = create<ChatStore>()(
         updateLastMessage: (chatId, lastMessage, activeTab) => {
           set((state) => {
             const updatedChats = state.chats[activeTab]?.map((chat) =>
-              chat.id === chatId ? { ...chat, lastMessage } : chat
+              chat.chatId === chatId ? { ...chat, lastMessage } : chat
             );
 
-            const chatToMove = updatedChats?.find((chat) => chat?.id === chatId);
+            const chatToMove = updatedChats?.find((chat) => chat?.chatId === chatId);
             const remainingChats = updatedChats?.filter(
               (chat) => chat?.chatId !== chatId
             );
@@ -154,6 +160,49 @@ export const useChatStore = create<ChatStore>()(
                   ? [chatToMove, ...remainingChats]
                   : remainingChats,
               },
+            };
+          });
+        },
+        bulkUpdateConversationsForOnlineOffline: (chatIds, userInfo) => {
+          set((state) => {
+            const updatedChats = { ...state.chats }; // Clone chats
+            const chatConversations = updatedChats["all"] || []; // Get all chats under "all" tab
+
+            // Iterate over chat conversations to update online status
+            const updatedConversations = chatConversations.map((conversation) => {
+              if (!chatIds.includes(conversation.chatId)) {
+                return conversation; // Skip chats not included in the provided IDs
+              }
+
+              const { onlineUsers = [], totalOnlineUsers = 0 } = conversation; // Ensure defaults
+              const isUserAlreadyOnline = onlineUsers.some(
+                (user) => user.id === userInfo.id
+              );
+
+              if (userInfo.status === "ONLINE" && !isUserAlreadyOnline) {
+                return {
+                  ...conversation,
+                  onlineUsers: [...onlineUsers, userInfo],
+                  totalOnlineUsers: totalOnlineUsers + 1,
+                };
+              } else if (userInfo.status === "OFFLINE" && isUserAlreadyOnline) {
+                return {
+                  ...conversation,
+                  onlineUsers: onlineUsers.filter((user) => user.id !== userInfo.id),
+                  totalOnlineUsers: Math.max(0, totalOnlineUsers - 1), // Ensure no negative values
+                };
+              }
+
+              return conversation; // Return unchanged if no update needed
+            });
+              // console.log({ updatedConversations });
+
+
+            // Update the "all" tab with the modified conversations
+            updatedChats["all"] = updatedConversations;
+
+            return {
+              chats: updatedChats,
             };
           });
         },

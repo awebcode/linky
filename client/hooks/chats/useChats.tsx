@@ -71,15 +71,16 @@ export const useChats = () => {
           const chatIds = new Set();
           // Merge chats from Zustand and fetched chats, filtering out duplicates
           const mergedChats = [
-            ...chats[activeTab],
             ...data.pages.flatMap((page) => page.chats),
+            ...chats[activeTab],
           ].filter((chat) => {
-            if (chatIds.has(chat.id)) {
+            if (chatIds.has(chat.chatId)) {
               return false; // Duplicate found, exclude it
             }
-            chatIds.add(chat.id);
+            chatIds.add(chat.chatId);
             return true;
           });
+          // setChats(activeTab, mergedChats, data.pages[0].totalChatMembersCount);
 
           // Return transformed data with merged and deduplicated chats
           return {

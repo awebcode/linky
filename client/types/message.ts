@@ -9,12 +9,14 @@
 //     }
 // }
 
+import type { MessageStatus } from "@prisma/client";
+
 interface MessageUser {
   id: string;
   name: string;
   image: string;
   status: string;
-  lastActive: string;
+  lastActive: Date;
 }
 
 interface Reaction {
@@ -24,10 +26,9 @@ interface Reaction {
 
 export interface MessageResponse {
   id: string;
-  tempId: string;
   content: string;
-  sentAt: string;
-  status: string;
+  sentAt: Date;
+  status: MessageStatus;
   sender: MessageUser;
   media?: { id: string; type: string; url: string }[];
   reactions?: Reaction[];

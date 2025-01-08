@@ -1,5 +1,5 @@
 import { StateStorage } from "zustand/middleware";
-import { get, set, del } from "idb-keyval";
+import { get, set, del, clear } from "idb-keyval";
 
 export const zustandIndexedDBStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
@@ -11,4 +11,15 @@ export const zustandIndexedDBStorage: StateStorage = {
   removeItem: async (name: string): Promise<void> => {
     await del(name);
   },
+};
+
+
+// Function to reset all persisted Zustand states
+export const resetZustandPersistedState = async (): Promise<void> => {
+  try {
+    await clear(); // Clears all data from IndexedDB
+    console.log("Persisted state cleared!");
+  } catch (error) {
+    console.error("Failed to clear persisted state:", error);
+  }
 };

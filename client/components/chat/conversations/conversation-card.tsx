@@ -17,6 +17,7 @@ import { useTabStore } from "@/hooks/useTabStore";
 import { WithTooltip } from "@/components/common/WithTooltip";
 import CardTypingIndicator from "../indicators/card-typing-indicator";
 import { useTypingStore } from "@/hooks/useTypingStore";
+import { useUser } from "@/hooks/use-user";
 
 interface ConversationCardProps {
   conversation: ChatConversation;
@@ -30,15 +31,16 @@ export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps
     const { selectedChat, pinChat, favoriteChat, deleteChat, markAsUnread } =
       useChatStore(useShallow((state) => state));
     const { message } = useMessageStore(useShallow((state) => state));
-    const {
-      isGroup,
-      groupInfo,
-      user: { status, name, image },
-    } = conversation;
+   
+    const { user: currentUser } = useUser();
+    const { isGroup, groupInfo, user: converSationUser } = conversation;
+    // console.log({conversation})
 
     // Get the draft message for the current conversation
     const draftMessage = message[conversation.chatId] || "";
-
+    // const isOnline = onlineUsersByChat[conversation.chatId]||conversation.totalOnlineUsers>0
+    // Calculate isOnline status
+    const isOnline = conversation?.onlineUsers.map((user) => user); // For direct chats, check onlineUsers list
     return (
       <ContextMenu>
         <ContextMenuTrigger>
@@ -54,13 +56,14 @@ export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps
             )}
           >
             <WithTooltip
+              side="bottom"
               content={
                 <div className="flex flex-col items-center gap-1">
-                  {isGroup ? (
+                  {/* {isGroup ? (
                     <UserAvatar
                       src={groupInfo?.groupImage}
                       fallback={groupInfo?.groupName}
-                      isOnline={false} // Groups don't have online status
+                      isOnline={isOnline} // Groups don't have online status
                       size="md"
                     />
                   ) : (
@@ -70,13 +73,17 @@ export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps
                       isOnline={status === "ONLINE"}
                       size="md"
                     />
-                  )}
+                  )} */}
 
-                  <p>{isGroup ? groupInfo?.groupName : name}</p>
+                  <p>{isGroup ? groupInfo?.groupName : converSationUser?.name}</p>
 
                   <span className="text-xs text-primary">
                     {" "}
                     {conversation.membersCount} - Members
+                  </span>
+                  <span className="text-xs text-emerald-500">
+                    {" "}
+                    {isOnline?.length || 0} - Online
                   </span>
                 </div>
               }
@@ -86,21 +93,23 @@ export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps
                   <UserAvatar
                     src={groupInfo?.groupImage}
                     fallback={groupInfo?.groupName}
-                    isOnline={false} // Groups don't have online status
+                    isOnline={isOnline?.length > 0} // Groups don't have online status
                     size="md"
                   />
                 ) : (
                   <UserAvatar
-                    src={image}
-                    fallback={name}
-                    isOnline={status === "ONLINE"}
+                    src={converSationUser?.image}
+                    fallback={converSationUser?.name}
+                    isOnline={
+                      converSationUser?.status === "ONLINE" || isOnline.length > 0
+                    }
                     size="md"
                   />
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-sm truncate">
-                      {isGroup ? groupInfo?.groupName : name}
+                      {isGroup ? groupInfo?.groupName : converSationUser?.name}
                     </h3>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(
@@ -115,7 +124,10 @@ export const ConversationCard = forwardRef<HTMLDivElement, ConversationCardProps
                     {typingUsers.filter((user) => user.chatId === conversation?.chatId)
                       .length > 0 ? (
                       <>
-                        <CardTypingIndicator />
+                        <CardTypingIndicator
+                          chatId={conversation?.chatId}
+                          userId={currentUser?.id}
+                        />
                       </>
                     ) : draftMessage ? (
                       <>

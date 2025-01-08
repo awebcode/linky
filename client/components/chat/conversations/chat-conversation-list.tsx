@@ -5,7 +5,7 @@ import { useChats } from "@/hooks/chats/useChats";
 import { ConversationCardSkeleton } from "../skeletons/ConversationCardSkeleton";
 import { Loader } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { UnlistedUserCard } from "./unlisted-user-card";
+import { UnlistedUserCard } from "../sidebar/unlisted-user-card";
 import { getChatsHeading } from "@/lib/chat.utils";
 import { useTabStore } from "@/hooks/useTabStore";
 import InfiniteFeed from "../InfiniteFeed";
@@ -28,7 +28,7 @@ export function ChatConversationList() {
     if (data) {
       const chats = data.pages.flatMap((page) => page.chats);
       const unlistedUsers = data.pages.flatMap((page) => page.unlistedUsers);
-     console.log({activeTab, chats, unlistedUsers,total:data.pages[0].totalChatMembersCount})
+      //  console.log({activeTab, chats, unlistedUsers,total:data.pages[0].totalChatMembersCount})
       setChats(activeTab, chats, data.pages[0].totalChatMembersCount);
       setUnlistedUsers(unlistedUsers);
       setFilteredChats({ chats, unlistedChats: unlistedUsers }, activeTab);
@@ -54,7 +54,7 @@ export function ChatConversationList() {
         )}
       </h2>
 
-      <div className="scrollbar-hide h-[calc(100vh-320px)] md:h-[calc(100vh-360px)] overflow-auto px-2">
+      <div className="scrollbar-hide h-[calc(100vh-220px)] md:h-[calc(100vh-260px)] overflow-auto px-2">
         {isLoading &&
           chats[activeTab]?.length === 0 &&
           Array.from({ length: 10 }).map((_, index) => (
@@ -82,12 +82,7 @@ export function ChatConversationList() {
             itemCount={displayedChats?.length || 0}
             loadMore={loadMoreItems}
             renderItem={({ ref, index }) => {
-              return (
-                <ConversationCard
-                  ref={ref}
-                  conversation={displayedChats[index]}
-                />
-              );
+              return <ConversationCard ref={ref} conversation={displayedChats[index]} />;
             }}
           />
           {/* {displayedChats?.map((conversation) => (

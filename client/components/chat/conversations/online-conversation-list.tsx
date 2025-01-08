@@ -69,13 +69,19 @@ export function OnlineUserList() {
 
       <ScrollArea className="flex-1 px-4 py-2">
         <div className="flex gap-3">
-          {onlineConversations.map((chatMember) => (
-            <OnlineUserCard
-              key={chatMember.chatId}
-              user={chatMember.onlineUser}
-              onChatClick={() => handleChatClick(chatMember.chatId)}
-            />
-          ))}
+          {onlineConversations
+            .filter(
+              (chatMember, index, self) =>
+                self.findIndex((m) => m.onlineUser.id === chatMember.onlineUser.id) ===
+                index
+            )
+            .map((chatMember) => (
+              <OnlineUserCard
+                key={chatMember.chatId}
+                user={chatMember.onlineUser}
+                onChatClick={() => handleChatClick(chatMember.chatId)}
+              />
+            ))}
           {isFetchingChats && (
             <div className="flex items-center justify-center">
               <Loader className="w-5 h-5 animate-spin text-primary" />

@@ -117,7 +117,8 @@ export interface ChatConversation {
 
   // List of admins in the chat (only for group chats)
   admins: ChatConversationUser[];
-
+  onlineUsers: ChatConversationUser[];
+  totalOnlineUsers: number;
   // Notification status for the current user (e.g., muted)
   notificationStatus: NotificationStatus;
 
@@ -131,8 +132,6 @@ export interface ChatConversation {
   pinnedAt: Date | null;
   favoriteAt: Date | null;
   unreadAt: Date | null;
-  
-
 }
 
 //online conversations

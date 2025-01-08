@@ -1,72 +1,79 @@
-import type { GetOnlineConversationsResponse } from "@/types/chat";
 import { create } from "zustand";
+import type { GetOnlineConversationsResponse, OnlineUser } from "@/types/chat";
 
-// Define the correct types based on the response structure
 interface OnlineConversationsStore {
   onlineConversations: GetOnlineConversationsResponse["onlineChatMembers"];
   totalOnlineChatMembersCount: number;
   addInitialOnlineConversations: (
     conversations: GetOnlineConversationsResponse["onlineChatMembers"],
-    totalOnlineChatMembersCount: number
+    totalCount: number
   ) => void;
-  addOnlineConversation: (
-    conversation: GetOnlineConversationsResponse["onlineChatMembers"][0]
-  ) => void;
-  updateOnlineConversation: (
-    chatId: string,
-    updatedFields: Partial<GetOnlineConversationsResponse["onlineChatMembers"][0]>
-  ) => void;
-  removeOnlineConversation: (chatId: string) => void;
-  getOnlineConversations: (
-    chatId: string
-  ) => GetOnlineConversationsResponse["onlineChatMembers"][0] | undefined;
-  setTotalOnlineChatMembersCount: (count: number) => void;
+
+  addBulkOnlineUsers: (chatIds: string[], userInfo: OnlineUser[]) => void;
+
+
+
 }
 
-export const useOnlineConversationsStore = create<OnlineConversationsStore>(
-  (set, get) => ({
-    onlineConversations: [],
-    totalOnlineChatMembersCount: 0, // Initialize the count to 0
+export const useOnlineConversationsStore = create<OnlineConversationsStore>((set) => ({
+  onlineConversations: [],
+  totalOnlineChatMembersCount: 0,
 
-    // Add initial online conversations and set the total count
-    addInitialOnlineConversations: (conversations, count) => {
-      set({
-        onlineConversations: conversations,
-        totalOnlineChatMembersCount: count, // Set the total count to the length of the initial list
-      });
-    },
+  // Add initial conversations with pagination support
+  addInitialOnlineConversations: (conversations, totalCount) => {
+    set({
+      onlineConversations: conversations,
+      totalOnlineChatMembersCount: totalCount,
+    });
+  },
 
-    // Add a new online conversation and update the count
-    addOnlineConversation: (conversation) => {
-      set((state) => ({
-        onlineConversations: [...state.onlineConversations, conversation],
-        totalOnlineChatMembersCount: state.totalOnlineChatMembersCount + 1, // Increment the count
-      }));
-    },
+  // Add or update users for a set of chatIds
+  addBulkOnlineUsers: (chatIds, userInfo) =>
+    set((state) => {
+      // Create a map to track if a user has already been added to a chat
+      const userMap = new Map<string, string>(); // userId -> chatId
 
-    // Update an existing online conversation (no change to total count)
-    updateOnlineConversation: (chatId, updatedFields) =>
-      set((state) => ({
-        onlineConversations: state.onlineConversations.map((conv) =>
-          conv.chatId === chatId ? { ...conv, ...updatedFields } : conv
-        ),
-      })),
+      const updatedMembers = chatIds
+        .map((chatId, index) => {
+          const { id: userId, status } = userInfo[index] || {}; // Fallback to avoid undefined error
 
-    // Remove an online conversation and update the count
-    removeOnlineConversation: (chatId) =>
-      set((state) => ({
-        onlineConversations: state.onlineConversations.filter(
-          (conv) => conv.chatId !== chatId
-        ),
-        totalOnlineChatMembersCount: state.totalOnlineChatMembersCount - 1, // Decrement the count
-      })),
+          // Skip invalid or missing user info
+          if (!userId || (status !== "ONLINE" && status !== "OFFLINE")) {
+            return null;
+          }
 
-    // Retrieve a specific online conversation by chatId
-    getOnlineConversations: (chatId) =>
-      get().onlineConversations.find((conv) => conv.chatId === chatId),
+          // Ensure that the user is not already added to another chat
+          if (userMap.has(userId)) {
+            return null; // This user is already in another chat
+          }
 
-    // Manually set the total count (useful if total is fetched independently)
-    setTotalOnlineChatMembersCount: (count) =>
-      set({ totalOnlineChatMembersCount: count }),
-  })
-);
+          // Check if the user is already in this chat
+          const existingMember = state.onlineConversations.find(
+            (conv) => conv.chatId === chatId && conv.onlineUser.id === userId
+          );
+
+          if (existingMember) {
+            return null; // User already in the chat, skip
+          }
+
+          // Add this user to the user map (chat-specific)
+          userMap.set(userId, chatId);
+
+          // Add the new member if no duplicates
+          return {
+            chatId,
+            id: userId,
+            onlineUser: userInfo[index],
+          };
+        })
+        .filter(Boolean); // Remove any null entries
+
+      return {
+        onlineConversations: [...state.onlineConversations, ...updatedMembers] as any,
+      };
+    }),
+
+ 
+
+
+}));

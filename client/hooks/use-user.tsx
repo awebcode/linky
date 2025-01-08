@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "./use-toast";
 import type { UserSessionResponse } from "@/types/user";
+import { resetZustandPersistedState } from "./cache/usePersist";
 export const useUser = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -32,7 +33,8 @@ export const handleLogout = async () => {
     title: "You have been logged out.",
     description: "You will be redirected to the home page.",
   });
-  localStorage.removeItem("userId");
+  await resetZustandPersistedState()
+  // localStorage.removeItem("userId");
   // Sign out and redirect to the home page
   await signOut({ redirectTo: "/" }); // prevent automatic redirect from signOut
 };

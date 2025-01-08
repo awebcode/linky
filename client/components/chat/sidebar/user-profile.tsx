@@ -15,7 +15,7 @@ export function UserProfile() {
         <UserAvatar src={user?.image} fallback={user?.name} isOnline />
         <div>
           <h3 className="font-medium">{user?.name}</h3>
-          <p className="text-sm text-muted-foreground">{user?.status}</p>
+          <p className="text-sm text-muted-foreground">Online</p>
         </div>
       </div>
       <UserActionDropdown

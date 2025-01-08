@@ -17,6 +17,6 @@ export interface UnlistedUser {
   lastActive: Date;
 }
 
-export interface TypingUser extends UnlistedUser {
+export interface TypingUser extends Omit<UnlistedUser, "email"> {
   chatId: string;
 }

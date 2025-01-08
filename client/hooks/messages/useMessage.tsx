@@ -8,7 +8,7 @@ import { useMessageStore } from "../useMessageStorage";
 
 // Function to send a message and handle success/error
 export const useMessageMutation = (redirectPath?: string) => {
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient();
   return useCustomMutationHook(
     async (data: CreateMessageInput) => {
       const response = await axiosInstance.post("/message/send-message", data);
@@ -88,10 +88,10 @@ export const useMessagesInfiniteQuery = () => {
             ...messages[selectedChat!.chatId],
             ...data.pages.flatMap((page) => page.messages),
           ].filter((message) => {
-            if (messageIds.has(message.id||message?.tempId)) {
+            if (messageIds.has(message.id)) {
               return false; // Duplicate found, exclude it
             }
-            messageIds.add(message.id||message?.tempId);
+            messageIds.add(message.id);
             return true;
           });
 

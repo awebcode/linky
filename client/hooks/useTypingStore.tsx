@@ -1,9 +1,9 @@
 import type { TypingUser } from "@/types/user";
 import { create } from "zustand";
 
-interface TypingState {
+export interface TypingState {
   chatId: string;
-  userInfo: TypingUser;
+  userInfo: TypingUser & { content?: string };
 }
 
 interface TypingStore {
@@ -17,14 +17,30 @@ export const useTypingStore = create<TypingStore>((set) => ({
 
   startTyping: (typingState) =>
     set((state) => {
-      // Check if the user is already typing in the same chat
+      const updatedTypingUsers = state.typingUsers.map((user) => {
+        if (
+          user.userInfo.id === typingState.userInfo.id &&
+          user.chatId === typingState.chatId
+        ) {
+          // Update content if the user is already typing
+          return {
+            ...user,
+            userInfo: {
+              ...user.userInfo,
+              content: typingState.userInfo.content,
+            },
+          };
+        }
+        return user;
+      });
+
       const isAlreadyTyping = state.typingUsers.some(
         (user) =>
           user.userInfo.id === typingState.userInfo.id &&
           user.chatId === typingState.chatId
       );
 
-      if (isAlreadyTyping) return state;
+      if (isAlreadyTyping) return { typingUsers: updatedTypingUsers };
 
       // Add the new typing state
       return {

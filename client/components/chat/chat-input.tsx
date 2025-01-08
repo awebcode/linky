@@ -10,10 +10,11 @@ import dynamic from "next/dynamic";
 import { SmileyInput } from "smiley-input";
 import { useSocket } from "@/hooks/use-socket";
 import { useUser } from "@/hooks/use-user";
-import { SocketEvents } from "@/types/socketEvents";
-import { v7 as uuid } from "uuid";
+import { SocketEvents } from "@/types/socket.types";
+// import { v7 as uuid } from "uuid";
 import { MessageStatus } from "@prisma/client";
 import { useTabStore } from "@/hooks/useTabStore";
+import { generateObjectId } from "@/lib/utils";
 
 const UppyFilesUploader = dynamic(() => import("../common/UppyFilesUploader"), {
   ssr: false,
@@ -31,13 +32,15 @@ export function ChatInput() {
 
   const chatId = selectedChat?.chatId || "";
 
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTypingTimeRef = useRef<number | null>(null);
+
   const sendMessage = useCallback(
     (content = "", files = []) => {
       if (!chatId || (!content && files.length === 0)) return;
-
+ const ObjectId=generateObjectId()
       const newMessage = {
-        id: uuid(),
-        tempId: uuid(),
+        id: ObjectId,
         content: files.length > 0 ? `${user.name} sent ${files.length} file(s)` : content,
         status: MessageStatus.SENT,
         sender: {
@@ -45,9 +48,9 @@ export function ChatInput() {
           name: user.name,
           image: user.image as string,
           status: user.status,
-          lastActive: new Date().toISOString(),
+          lastActive: new Date(),
         },
-        sentAt: new Date().toISOString(),
+        sentAt: new Date(),
         files,
       };
 
@@ -58,11 +61,15 @@ export function ChatInput() {
         receiverId: selectedChat?.isGroup ? null : selectedChat?.user.id,
       });
 
-      setMessages(chatId, [newMessage], totalMessagesCount[chatId] + 1);
+      setMessages(
+        chatId,
+        [{ ...newMessage, status: MessageStatus.PENDING }],
+        totalMessagesCount[chatId] + 1
+      );
       updateLastMessage(
         chatId,
         {
-          id: uuid(),
+          id: ObjectId,
           content:
             files.length > 0 ? `${user.name} sent ${files.length} file(s)` : content,
           senderId: user.id,
@@ -83,8 +90,49 @@ export function ChatInput() {
       setFiles,
       totalMessagesCount,
       updateLastMessage,
+      activeTab
     ]
   );
+
+  const handleTyping = useCallback(() => {
+    const typingData = {
+      chatId,
+      userInfo: {
+        name: user.name,
+        image: user.image,
+        id: user.id,
+        status: user.status,
+        content: message[chatId],
+      },
+    };
+
+    const currentTime = Date.now();
+
+    if (message[chatId]?.trim()) {
+      // Emit typing event
+      socket.emit(SocketEvents.USER_START_TYPING, typingData);
+      lastTypingTimeRef.current = currentTime;
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Stop typing after 2000ms of inactivity
+      typingTimeoutRef.current = setTimeout(() => {
+        const timeDiff = Date.now() - (lastTypingTimeRef.current || 0);
+        if (timeDiff >= 2000) {
+          socket.emit(SocketEvents.USER_STOP_TYPING, typingData);
+        }
+      }, 2000);
+    } else {
+      // Stop typing immediately if the message is cleared
+      socket.emit(SocketEvents.USER_STOP_TYPING, typingData);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    }
+  }, [chatId, message, socket, user]);
 
   const handleSubmit = useCallback(
     (e: any) => {
@@ -104,45 +152,29 @@ export function ChatInput() {
     [sendMessage]
   );
 
-  /**
-   * @description Send typing event to the server
-   * SIMPLE
-   */
-  const typingData = {
-    chatId,
-    userInfo: {
-      name: user.name,
-      image: user.image,
-      id: user.id,
-      status: user.status,
-    },
-  };
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  useEffect(() => {
+    handleTyping();
+  }, [message, chatId, handleTyping]);
 
   useEffect(() => {
-    const newMessage = message[chatId]?.trim();
-
-    // Send typing event if there is any input
-    if (newMessage && newMessage.length > 0) {
-      socket.emit(SocketEvents.USER_START_TYPING, typingData);
-    }
-
-    // Clear previous typing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Stop typing event after delay (2000ms)
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit(SocketEvents.USER_STOP_TYPING, typingData);
-    }, 2000);
-
     return () => {
+      // Stop typing on component unmount or chat change
+      const typingData = {
+        chatId,
+        userInfo: {
+          name: user.name,
+          image: user.image,
+          id: user.id,
+          status: user.status,
+          content: "",
+        },
+      };
+      socket.emit(SocketEvents.USER_STOP_TYPING, typingData);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     };
-  }, [message, chatId, socket]);
+  }, [chatId, socket, user]);
 
   return (
     <div className="flex items-center gap-2 p-2 border-t">
@@ -165,7 +197,16 @@ export function ChatInput() {
         <SmileyInput
           value={message[chatId] || ""}
           setValue={(value) => setMessage(chatId, value)}
-          keepOpened={false}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault(); // Prevents adding a newline
+              const content = message[chatId]?.trim();
+              if (content) {
+                sendMessage(content);
+              }
+            }
+          }}
+          keepOpened
           placeholder="Type a message..."
           pickerOptions={{ theme: "auto" }}
           emojiButtonElement={"😎"}

@@ -23,6 +23,7 @@ enum Status {
 }
 
 enum MessageStatus {
+  PENDING // Message is pending delivery
   SENT // Message has been sent
   DELIVERED // Message has been delivered to the recipient(s)
   READ // Message has been read by the recipient(s)
