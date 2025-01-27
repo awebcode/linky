@@ -9,6 +9,7 @@ chatRouter
   .get("/get-chats", chatController.getChats)
   .get("/get-online-conversations", chatController.getOnlineConversations)
   .get("/chats-counts", chatController.getChatsCount);
-chatRouter.post("/add_user_to_chat", chatController.addUserToChat);
+chatRouter.put("/add_user_to_chat", chatController.addUserToChat);
+chatRouter.put("/remove_user_from_chat", chatController.removeUserFromChat);
 chatRouter.delete("/delete-all-chats", chatController.deleteAllChats);
 export default chatRouter;

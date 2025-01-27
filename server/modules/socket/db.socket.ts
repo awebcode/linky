@@ -2,6 +2,25 @@ import type { z } from "zod";
 import  { CreateSocketMessageSchema } from "./dtos.socket";
 import prisma from "../../libs/prisma";
 import { AppError } from "../../middlewares/errors-handle.middleware";
+import { loggerInstance } from "../../config/logger.config";
+
+/**
+ * @description Get GroupIds For User From DB
+ * @param userId - The ID of the user to fetch groups for.
+ * @returns {Promise<string[]>} - A promise that resolves to an array of group IDs.
+ */
+export const getGroupIdsForUserFromDB = async (userId: string) => {
+  try {
+    const groupIds = await prisma.chat.findMany({
+      where: {isGroup: true, members: { some: { id: userId } } },
+      select: { id: true },
+    });
+    return groupIds.map((group) => group.id);
+  } catch (error) {
+    loggerInstance.error("Error fetching group IDs", error);
+    throw new AppError("Error fetching group IDs", 500);
+  }
+};
 
 /**
  * @description Create Message For Socket
@@ -10,11 +29,11 @@ import { AppError } from "../../middlewares/errors-handle.middleware";
 export const createMessageForSocket = async (
   data: z.infer<typeof CreateSocketMessageSchema>
 ) => {
-  const { content,tempId, chatId, sender, files } = CreateSocketMessageSchema.parse(data);
+  const {id, content, chatId, sender, files } = CreateSocketMessageSchema.parse(data);
 
   try {
     const messageData: any = {
-      tempId,
+      id,
       content,
       senderId: sender.id,
       chatId,
@@ -31,7 +50,7 @@ export const createMessageForSocket = async (
     const message = await prisma.message.create({ data: messageData, select: {id: true} });
     return message;
   } catch (error) {
-    console.log({ error });
+    loggerInstance.error("Error creating message", error);
     throw new AppError("Error creating message", 500);
   }
 };

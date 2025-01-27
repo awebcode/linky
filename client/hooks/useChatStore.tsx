@@ -372,7 +372,7 @@ export const useChatStore = create<ChatStore>()(
       name: "chat-storage",
       storage: createJSONStorage(() => zustandIndexedDBStorage),
       partialize(state) {
-        const { searchValue, filteredChats, ...rest } = state;
+        const { searchValue, filteredChats,chats, ...rest } = state;
         return rest;
       },
     }

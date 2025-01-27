@@ -1,5 +1,7 @@
+import type { RedisClientType } from "redis";
 import { loggerInstance } from "../../config/logger.config";
 import { ensureRedisConnection, pubClient } from "../../config/redis.config";
+import type { ModifyUserGroupsParams } from "../../types/redis.types";
 const isOnlineR = async (userId: string) => {
   try {
     const status = await pubClient.get(`online_user:${userId}`);
@@ -8,11 +10,11 @@ const isOnlineR = async (userId: string) => {
     loggerInstance.error(`Error checking online status: ${userId}`, error);
     return false;
   }
-}
+};
 // Redis services
 const setUserOnline = async (userId: string) => {
   try {
-    if(!userId) return
+    if (!userId) return;
     await pubClient.setEx(`online_user:${userId}`, 120, "online"); // Set user online for 2 minutes
     await pubClient.sAdd("online_users_set", userId);
   } catch (error) {
@@ -22,7 +24,7 @@ const setUserOnline = async (userId: string) => {
 
 const isUserOnline = async (userId: string): Promise<boolean> => {
   try {
-    if(!userId) return false
+    if (!userId) return false;
     const status = await pubClient.get(`online_user:${userId}`);
     return !!status;
   } catch (error) {
@@ -33,7 +35,7 @@ const isUserOnline = async (userId: string): Promise<boolean> => {
 
 const removeUserOnline = async (userId: string) => {
   try {
-    if(!userId) return
+    if (!userId) return;
     await pubClient.del(`online_user:${userId}`);
     await pubClient.sRem("online_users_set", userId);
   } catch (error) {
@@ -94,6 +96,69 @@ const leaveRoomR = async (userId: string, roomId: string) => {
   }
 };
 
+// Reusable function to add or remove group IDs for a user
+const modifyUserGroupsRedis = async ({
+  userId,
+  groupIds,
+  operation,
+}: ModifyUserGroupsParams): Promise<void> => {
+  const redisKey = `user:${userId}:groups`;
 
+  try {
+    if (operation === "add") {
+      await pubClient.sAdd(redisKey, groupIds);
+      loggerInstance.info(
+        `Added groups: ${
+          Array.isArray(groupIds) ? groupIds.join(", ") : groupIds
+        } for user: ${userId}`
+      );
+    } else if (operation === "remove") {
+      await pubClient.sRem(redisKey, groupIds);
+      loggerInstance.info(
+        `Removed groups: ${
+          Array.isArray(groupIds) ? groupIds.join(", ") : groupIds
+        } for user: ${userId}`
+      );
+    } else {
+      throw new Error('Invalid operation. Use "add" or "remove".');
+    }
+  } catch (error) {
+    loggerInstance.error(
+      `Failed to ${operation} groups: ${
+        Array.isArray(groupIds) ? groupIds.join(", ") : groupIds
+      } for user: ${userId}`,
+      error
+    );
+  }
+};
 
-export {isOnlineR, setUserOnline, isUserOnline, removeUserOnline, getAllOnlineUsers,getRoomMembersR, joinRoomR, leaveRoomR };
+/**
+ * Retrieve all groups associated with a specific user
+ * @param {string} userId - The ID of the user to fetch groups for.
+ * @returns {Promise<string[]>} - A promise that resolves to an array of group IDs.
+ */
+const getUserGroupsRedis = async (userId: string): Promise<string[]> => {
+  const redisKey = `user:${userId}:groups`;
+
+  try {
+    const groups = await pubClient.sMembers(redisKey); // Fetch all groups from Redis
+    loggerInstance.info(`Fetched groups for user ${userId}: ${groups.join(", ")}`);
+    return groups;
+  } catch (error) {
+    loggerInstance.error(`Failed to fetch groups for user ${userId}`, error);
+    throw new Error(`Unable to retrieve groups for user: ${userId}`);
+  }
+};
+
+export {
+  isOnlineR,
+  setUserOnline,
+  isUserOnline,
+  removeUserOnline,
+  getAllOnlineUsers,
+  getRoomMembersR,
+  joinRoomR,
+  leaveRoomR,
+  modifyUserGroupsRedis,
+  getUserGroupsRedis,
+};

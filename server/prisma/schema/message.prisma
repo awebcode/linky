@@ -1,6 +1,5 @@
 model Message {
-  id          String        @id @default(auto()) @map("_id") @db.ObjectId
-  tempId      String?        
+   id        String   @id @default(uuid()) @map("_id")
   content     String
   senderId    String        @db.ObjectId
   chatId      String        @db.ObjectId

@@ -21,6 +21,15 @@ const addUserToChat: RequestHandler = async (req, res, next) => {
   }
 };
 
+const removeUserFromChat: RequestHandler = async (req, res, next) => {
+  try {
+    await chatService.removeUserFromChat(req);
+    res.status(200).json({ message: "User removed from chat" });
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getChats: RequestHandler = async (req, res, next) => {
   try {
     const chats = await chatService.getChats(req);
@@ -57,4 +66,4 @@ const deleteAllChats: RequestHandler = async (req, res, next) => {
   }
 };
 
-export { createChat, addUserToChat, getChats,getOnlineConversations, deleteAllChats, getChatsCount };
+export { createChat, addUserToChat,removeUserFromChat, getChats,getOnlineConversations, deleteAllChats, getChatsCount };

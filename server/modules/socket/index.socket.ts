@@ -1,31 +1,45 @@
-// socket/index.ts
 import { Server, Socket } from "socket.io";
 import http from "http";
 import { createAdapter } from "@socket.io/redis-adapter";
 import { pubClient, subClient } from "../../config/redis.config";
 import { handleSocketEvents } from "./handle.socket";
+import { loggerInstance } from "../../config/logger.config"; // Logger for error tracking
+import { AppError } from "../../middlewares/errors-handle.middleware";
 
 let io: Server;
 
-/**
- * Initialize the Socket.io server with Redis adapter.
- * @param {http.Server} server - The HTTP server to attach the WebSocket server to.
- */
 const initSocket = (server: http.Server) => {
-  io = new Server(server, {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-    adapter: createAdapter(pubClient, subClient),
-    perMessageDeflate: {
-      threshold: 1024, // Compress messages larger than 1 KB
-    },
-    allowEIO3: true, // Enable support for EIO 3
-    transports: ["websocket", "polling", "webtransport"],
-  });
+  try {
+    io = new Server(server, {
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+      },
+      adapter: createAdapter(pubClient, subClient),
+      perMessageDeflate: {
+        threshold: 1024,
+      },
+      allowEIO3: true,
+      transports: ["websocket", "polling", "webtransport"],
+    });
 
-  io.on("connection", (socket: Socket) => handleSocketEvents(socket, io));
+    io.on("connection", (socket: Socket) => {
+      try {
+        handleSocketEvents(socket, io);
+      } catch (err) {
+        loggerInstance.error("Error handling socket event:", err);
+        socket.emit("error", "An unexpected error occurred");
+      }
+    });
+
+    io.on("error", (err) => {
+      loggerInstance.error("Socket.IO server error:", err);
+      throw new AppError("Socket.IO Initialization Error", 500); // Custom error
+    });
+  } catch (err) {
+    loggerInstance.error("Error initializing Socket.IO:", err);
+    throw new AppError("Socket.IO Initialization Failed", 500);
+  }
 };
 
 export { initSocket, io };

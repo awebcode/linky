@@ -17,7 +17,7 @@ router.post("/reset-password", userController.resetPassword);
 router.get(
   "/get-users",
   authMiddleware,
-  rolesMiddleware([Role.ADMIN]),
+  // rolesMiddleware([Role.ADMIN]),
   userController.getUsers
 );
 router.delete(
